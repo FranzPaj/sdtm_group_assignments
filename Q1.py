@@ -39,3 +39,13 @@ for elem in obj_dict.keys():
     Obj = Object(obj_dict, elem)
     objs_ls.append(Obj)
 
+########## Initial filter ##########
+    
+########## TCA Assessment ##########
+
+######## Detailed assessment ##########
+    
+######## cManoeuvre assessment ##########
+
+
+

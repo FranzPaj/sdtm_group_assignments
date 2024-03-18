@@ -3,9 +3,9 @@ import os
 from datetime import datetime
 import time
 
-import EstimationUtilities as EstUtil
-import TudatPropagator as prop
-import ConjunctionUtilities as ConjUtil
+import pycode.EstimationUtilities as EstUtil
+import pycode.TudatPropagator as prop
+import pycode.ConjunctionUtilities as ConjUtil
 
 ###############################################################################
 # Basic I/O
