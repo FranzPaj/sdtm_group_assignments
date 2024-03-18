@@ -29,9 +29,14 @@ for elem in data_dict.keys():
              
 ########## Initial filter ##########
 
+# Perigee-apogee filter
 distance_pa = 3 * 10**3  # Acceptable perigee-apogee distance
-obj_ls = util.perigee_apogee_filter(my_sat, obj_dict, distance_pa)
-    
+obj_dict = util.perigee_apogee_filter(my_sat, obj_dict, distance_pa)
+# 17 remaining
+
+#
+
+
 ########## TCA Assessment ##########
 
 ######## Detailed assessment ##########

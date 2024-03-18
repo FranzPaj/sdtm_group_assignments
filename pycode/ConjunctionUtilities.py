@@ -76,7 +76,7 @@ class Object:
         self.sma = self.keplerian_state[0]  # semi-major axis
         self.ecc = self.keplerian_state[1]  # eccentricity
         self.rp = self.sma * (1 - self.ecc)  # radius of periapsis
-        self.ra = self.sma * (1 - self.ecc)  # radius of apoapsis
+        self.ra = self.sma * (1 + self.ecc)  # radius of apoapsis
 
 
 ###############################################################################
@@ -143,11 +143,10 @@ def perigee_apogee_filter(my_sat: Object, obj_dict: dict[Object], acceptable_rad
         obj = obj_dict[norad_id]
         if obj.rp - my_sat.ra > acceptable_radial_distance or my_sat.rp - obj.ra > acceptable_radial_distance:
             delete_ls.append(norad_id)
-            # print('Filter works yay')
+
     # Eliminate impossible impactors
     for norad_id in delete_ls:
         obj_dict.pop(norad_id)
-    print(len(delete_ls))
 
     return obj_dict
 
