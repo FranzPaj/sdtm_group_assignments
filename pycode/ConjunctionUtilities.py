@@ -46,7 +46,7 @@ import pycode.TudatPropagator as prop
 
 
 ###############################################################################
-# Homebrew Utilities and Useful Constants
+# Homebrew Classes and Useful Constants
 ###############################################################################
 
 mu_e = spice.get_body_gravitational_parameter('Earth')  # Earth gravitational parameter
@@ -71,6 +71,13 @@ class Object:
         self.area = obj_dict[elem]['area']  # Object reference area
         self.Cd = obj_dict[elem]['Cd']  # Object drag coefficient
         self.Cr = obj_dict[elem]['Cr']  # Object radiation pressure coefficient
+
+        # Calculate useful parameters
+        self.sma = self.keplerian_state[0]  # semi-major axis
+        self.ecc = self.keplerian_state[1]  # eccentricity
+        self.rp = self.sma * (1 - self.ecc)  # radius of periapsis
+        self.ra = self.sma * (1 - self.ecc)  # radius of apoapsis
+
 
 ###############################################################################
 # Basic I/O
@@ -112,6 +119,37 @@ def read_catalog_file(rso_file):
     
     return rso_dict
 
+
+###############################################################################
+# Filter Functions
+###############################################################################
+
+def perigee_apogee_filter(my_sat: Object, obj_dict: dict[Object], acceptable_radial_distance: float) -> list[Object]:
+    """Perigee-apogee filter that eliminates possible conjunctions if the difference between the perigee of the 
+    impactor and the apogee of your object or between the perigee of your object and the apogee of the impactor
+    are bigger than a given distance.
+     
+    Input:
+        my_sat: class instance of the analysed satellite.
+        obj_dict: list of class instances of all the relevant possible impactors.
+        acceptable_radial_distance: radial separation sufficient to rule out conjunction.
+    Returns:
+        obj_list: updated list of possible impactors. 
+    """
+
+    delete_ls = list()
+    # Find impossible conjunctions
+    for norad_id in obj_dict.keys(): 
+        obj = obj_dict[norad_id]
+        if obj.rp - my_sat.ra > acceptable_radial_distance or my_sat.rp - obj.ra > acceptable_radial_distance:
+            delete_ls.append(norad_id)
+            # print('Filter works yay')
+    # Eliminate impossible impactors
+    for norad_id in delete_ls:
+        obj_dict.pop(norad_id)
+    print(len(delete_ls))
+
+    return obj_dict
 
 ###############################################################################
 # 2D Probability of Collision (Pc) Functions
