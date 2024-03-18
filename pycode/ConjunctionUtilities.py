@@ -39,7 +39,38 @@ from scipy.special import erfcinv
 import pickle
 import time
 
+from tudatpy.astro.time_conversion import epoch_from_date_time_components
+from tudatpy.astro.element_conversion import cartesian_to_keplerian
+from tudatpy.interface import spice 
 import pycode.TudatPropagator as prop
+
+
+###############################################################################
+# Homebrew Utilities and Useful Constants
+###############################################################################
+
+mu_e = spice.get_body_gravitational_parameter('Earth')  # Earth gravitational parameter
+
+class Object:
+
+    def __init__(self,obj_dict,elem):
+
+        # Define the orbital elements and characteristic of a certain spacecraft or debris
+        self.NORAD_ID = elem  # NORAD ID of the element
+        # Object epoch
+        self.utc = obj_dict[elem]['UTC']  # UTC of the time corresponding to the object state
+        self.epoch = epoch_from_date_time_components(
+            self.utc.year, self.utc.month, self.utc.day, self.utc.hour, 
+            self.utc.minute, float(self.utc.second))  # epoch since J2000 for TudatPy - s
+        # Object state and covariance
+        self.cartesian_state = obj_dict[elem]['state']  # Cartesian state at epoch
+        self.keplerian_state = cartesian_to_keplerian(self.cartesian_state,mu_e)  # Keplerian state at epoch
+        self.covar = obj_dict[elem]['covar']  # Uncertainty covariance at epoch
+        # Object properties
+        self.mass = obj_dict[elem]['mass']  # Object mass
+        self.area = obj_dict[elem]['area']  # Object reference area
+        self.Cd = obj_dict[elem]['Cd']  # Object drag coefficient
+        self.Cr = obj_dict[elem]['Cr']  # Object radiation pressure coefficient
 
 ###############################################################################
 # Basic I/O
