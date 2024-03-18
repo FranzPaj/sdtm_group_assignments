@@ -43,6 +43,7 @@ from tudatpy.astro.time_conversion import epoch_from_date_time_components
 from tudatpy.astro.element_conversion import cartesian_to_keplerian
 from tudatpy.interface import spice 
 import pycode.TudatPropagator as prop
+# import TudatPropagator as prop  # For unit testing
 
 
 ###############################################################################
@@ -61,7 +62,7 @@ class Object:
         self.utc = obj_dict[elem]['UTC']  # UTC of the time corresponding to the object state
         self.epoch = epoch_from_date_time_components(
             self.utc.year, self.utc.month, self.utc.day, self.utc.hour, 
-            self.utc.minute, float(self.utc.second))  # epoch since J2000 for TudatPy - s
+            self.utc.minute, float(self.utc.second))  # Epoch since J2000 for TudatPy - s
         # Object state and covariance
         self.cartesian_state = obj_dict[elem]['state']  # Cartesian state at epoch
         self.keplerian_state = cartesian_to_keplerian(self.cartesian_state,mu_e)  # Keplerian state at epoch
@@ -73,10 +74,12 @@ class Object:
         self.Cr = obj_dict[elem]['Cr']  # Object radiation pressure coefficient
 
         # Calculate useful parameters
-        self.sma = self.keplerian_state[0]  # semi-major axis
-        self.ecc = self.keplerian_state[1]  # eccentricity
-        self.rp = self.sma * (1 - self.ecc)  # radius of periapsis
-        self.ra = self.sma * (1 + self.ecc)  # radius of apoapsis
+        self.sma = self.keplerian_state[0]  # Semi-major axis
+        self.ecc = self.keplerian_state[1]  # Eccentricity
+        self.incl = self.keplerian_state[2]  # Inclination
+        self.raan = self.keplerian_state[3]  # RAAN
+        self.rp = self.sma * (1 - self.ecc)  # Radius of periapsis
+        self.ra = self.sma * (1 + self.ecc)  # Radius of apoapsis
 
 
 ###############################################################################
@@ -125,9 +128,8 @@ def read_catalog_file(rso_file):
 ###############################################################################
 
 def perigee_apogee_filter(my_sat: Object, obj_dict: dict[Object], acceptable_radial_distance: float) -> list[Object]:
-    """Perigee-apogee filter that eliminates possible conjunctions if the difference between the perigee of the 
-    impactor and the apogee of your object or between the perigee of your object and the apogee of the impactor
-    are bigger than a given distance.
+    """Perigee-apogee filter that eliminates possible conjunctions if the difference between the largest of the two perigees 
+    and the smallest of the two apogees is bigger than a given distance.
      
     Input:
         my_sat: class instance of the analysed satellite.
@@ -141,7 +143,9 @@ def perigee_apogee_filter(my_sat: Object, obj_dict: dict[Object], acceptable_rad
     # Find impossible conjunctions
     for norad_id in obj_dict.keys(): 
         obj = obj_dict[norad_id]
-        if obj.rp - my_sat.ra > acceptable_radial_distance or my_sat.rp - obj.ra > acceptable_radial_distance:
+        q = max([my_sat.rp, obj.rp])  # Max of the two perigees
+        Q = min([my_sat.ra, obj.ra])  # Min of the two apogees
+        if q - Q > acceptable_radial_distance:
             delete_ls.append(norad_id)
 
     # Eliminate impossible impactors
@@ -149,6 +153,136 @@ def perigee_apogee_filter(my_sat: Object, obj_dict: dict[Object], acceptable_rad
         obj_dict.pop(norad_id)
 
     return obj_dict
+
+
+def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclidean_distance: float) -> list[Object]:
+    """Geometrical filter that eliminates possible conjunctions if the minimum euclidean distance between the orbits 
+    of the object and of the possible impactor is bigger than a given distance. The naming convention follows from 
+    Hoots et al. (1984).
+     
+    Input:
+        my_sat: class instance of the analysed satellite.
+        obj_dict: list of class instances of all the relevant possible impactors.
+        acceptable_radial_distance: radial separation sufficient to rule out conjunction.
+    Returns:
+        obj_list: updated list of possible impactors. 
+    """
+
+    delete_ls = list()
+    # Define orbital elements of my_sat
+    w_p = orbit_orientation(my_sat.keplerian_state)
+    n_p = node_line(my_sat.keplerian_state)
+    omega_p = my_sat.keplerian_state[3]
+    ecc_p = my_sat.keplerian_state[1]
+    sma_p = my_sat.keplerian_state[0]
+    # Find impossible conjunctions
+    for norad_id in obj_dict.keys(): 
+        obj = obj_dict[norad_id]
+        # Define orbital elements of obj
+        w_s = orbit_orientation(obj.keplerian_state)
+        n_s = node_line(obj.keplerian_state)
+        omega_s = obj.keplerian_state[3]
+        ecc_s = my_sat.keplerian_state[1]
+        sma_s = my_sat.keplerian_state[0]
+        # Calculate relevant vectors
+        k_vec = np.cross(w_s, w_p)
+        i_r = np.arcsin(np.linalg.norm(k_vec))
+        Delta_p = np.arccos(np.dot(k_vec,n_p) / np.linalg.norm(k_vec))
+        Delta_s = np.arccos(np.dot(k_vec,n_s) / np.linalg.norm(k_vec))
+        # Find optimal true anomalies
+        h = 2*np.pi
+        k = 2*np.pi
+        angle_th = np.deg2rad(0.0001)
+
+        # Search for point 1
+        fp = Delta_p - omega_p
+        fs = Delta_s - omega_s
+        while np.abs(h) > angle_th or np.abs(k) > angle_th:
+            # print(np.rad2deg(h),np.rad2deg(k), np.rad2deg(angle_th))
+            ur_p = fp + omega_p - Delta_p
+            ur_s = fs + omega_s - Delta_s
+            r_p = sma_p * (1 - ecc_p**2) / (1 + ecc_p * np.cos(fp))
+            r_s = sma_s * (1 - ecc_s**2) / (1 + ecc_s * np.cos(fs))
+            ax_p = ecc_p * np.cos(omega_p - Delta_p)
+            ay_p = ecc_p * np.sin(omega_p - Delta_p)
+            ax_s = ecc_s * np.cos(omega_s - Delta_s)
+            ay_s = ecc_s * np.sin(omega_s - Delta_s)
+            A = np.sin(ur_p) + ay_p
+            B = np.cos(ur_p) + ax_p
+            C = np.sin(ur_s) + ay_s
+            D = np.cos(ur_s) + ax_s
+            gamma = np.arccos(np.cos(ur_p) * np.cos(ur_s) + np.sin(ur_p) * np.sin(ur_s) * np.cos(i_r))
+            E_p = 2 * np.arctan(np.sqrt((1 - ecc_p)/(1+ecc_p)) * np.tan(fp/2))
+            E_s = 2 * np.arctan(np.sqrt((1 - ecc_s)/(1+ecc_s)) * np.tan(fs/2))
+
+            F = r_p * ecc_p * np.sin(fp) + r_s * (A * np.cos(ur_s) - B * np.cos(i_r) * np.sin(ur_s))
+            G = r_s * ecc_s * np.sin(fs) + r_p * (C * np.cos(ur_p) - D * np.cos(i_r) * np.sin(ur_p))
+            dF_dfp = r_p * ecc_p * np.cos(E_p) + r_s * np.cos(gamma)
+            dF_dfs = - r_s / (1 + ecc_s * np.cos(fs)) * (A * C + B * D * np.cos(i_r))
+            dG_dfp = - r_p / (1 + ecc_p * np.cos(fp)) * (A * C + B * D * np.cos(i_r))
+            dG_dfs = r_s * ecc_s * np.cos(E_s) + r_p * np.cos(gamma)
+
+            h = (F * dG_dfs - G * dF_dfs) / (dF_dfs * dG_dfp - dF_dfp * dG_dfs)
+            k = (G * dF_dfp - F * dG_dfp) / (dF_dfs * dG_dfp - dF_dfp * dG_dfs) 
+
+            # # DEBUG
+            # r_rel = np.sqrt(r_p**2 + r_s**2 - 2 * r_p * r_s * np.cos(gamma))
+            # print('Relative distance at iteration:',r_rel)
+
+            fp = fp + h
+            fs = fs + k
+
+        r_rel_1 = np.sqrt(r_p**2 + r_s**2 - 2 * r_p * r_s * np.cos(gamma))
+
+        # Search for point 2
+        h = 2*np.pi
+        k = 2*np.pi
+        fp = fp + np.pi
+        fs = fs + np.pi
+        while np.abs(h) > angle_th or np.abs(k) > angle_th:
+            # print(np.rad2deg(h),np.rad2deg(k), np.rad2deg(angle_th))
+            ur_p = fp + omega_p - Delta_p
+            ur_s = fs + omega_s - Delta_s
+            r_p = sma_p * (1 - ecc_p**2) / (1 + ecc_p * np.cos(fp))
+            r_s = sma_s * (1 - ecc_s**2) / (1 + ecc_s * np.cos(fs))
+            ax_p = ecc_p * np.cos(omega_p - Delta_p)
+            ay_p = ecc_p * np.sin(omega_p - Delta_p)
+            ax_s = ecc_s * np.cos(omega_s - Delta_s)
+            ay_s = ecc_s * np.sin(omega_s - Delta_s)
+            A = np.sin(ur_p) + ay_p
+            B = np.cos(ur_p) + ax_p
+            C = np.sin(ur_s) + ay_s
+            D = np.cos(ur_s) + ax_s
+            gamma = np.arccos(np.cos(ur_p) * np.cos(ur_s) + np.sin(ur_p) * np.sin(ur_s) * np.cos(i_r))
+            E_p = 2 * np.arctan(np.sqrt((1 - ecc_p)/(1 + ecc_p)) * np.tan(fp/2))
+            E_s = 2 * np.arctan(np.sqrt((1 - ecc_s)/(1 + ecc_s)) * np.tan(fs/2))
+
+            F = r_p * ecc_p * np.sin(fp) + r_s * (A * np.cos(ur_s) - B * np.cos(i_r) * np.sin(ur_s))
+            G = r_s * ecc_s * np.sin(fs) + r_p * (C * np.cos(ur_p) - D * np.cos(i_r) * np.sin(ur_p))
+            dF_dfp = r_p * ecc_p * np.cos(E_p) + r_s * np.cos(gamma)
+            dF_dfs = - r_s / (1 + ecc_s * np.cos(fs)) * (A * C + B * D * np.cos(i_r))
+            dG_dfp = - r_p / (1 + ecc_p * np.cos(fp)) * (A * C + B * D * np.cos(i_r))
+            dG_dfs = r_s * ecc_s * np.cos(E_s) + r_p * np.cos(gamma)
+
+            h = (F * dG_dfs - G * dF_dfs) / (dF_dfs * dG_dfp - dF_dfp * dG_dfs)
+            k = (G * dF_dfp - F * dG_dfp) / (dF_dfs * dG_dfp - dF_dfp * dG_dfs) 
+
+            fp = fp + h
+            fs = fs + k
+
+        r_rel_2 = np.sqrt(r_p**2 + r_s**2 - 2 * r_p * r_s * np.cos(gamma))
+
+        r_rel = min([r_rel_1, r_rel_2])
+
+        if r_rel > acceptable_euclidean_distance:
+            delete_ls.append(norad_id)
+
+    # Eliminate impossible impactors
+    for norad_id in delete_ls:
+        obj_dict.pop(norad_id)
+
+    return obj_dict
+
 
 ###############################################################################
 # 2D Probability of Collision (Pc) Functions
@@ -250,7 +384,6 @@ def Pc2D_Foster(X1, P1, X2, P2, HBR, rtol=1e-8, HBR_type='circle'):
         print(HBR_type)
     
     return Pc
-
 
 
 def remediate_covariance(Praw, Lclip, Lraw=[], Vraw=[]):
@@ -385,7 +518,6 @@ def montecarlo_Pc_combined(r_A, r_B, P_A, P_B, HBR):
 ###############################################################################
 # Time of Closest Approach (TCA) Calculation
 ###############################################################################
-
 
 def compute_TCA(X1, X2, trange, rso1_params, rso2_params, int_params, 
                 bodies=None, rho_min_crit=0., N=16, subinterval_factor=0.5):
@@ -1005,6 +1137,52 @@ def ric2eci_vel(rc_vect, vc_vect, rho_ric, drho_ric):
     
     return drho_eci
 
+
+###############################################################################
+# Random Functions
+###############################################################################
+
+def orbit_orientation(kepler_elements: np.ndarray[float]) -> list[float]:
+    """Calculate the versor defining the orientation of an orbit.
+    
+    Input:
+        kepler_elements: Keplerian elements of an object.
+    Returns:
+        w: orientation vector of the orbit.
+    """
+
+    i = kepler_elements[2]
+    raan = kepler_elements[4]
+    ihat = np.array([1,0,0])
+    jhat = np.array([0,1,0])
+    khat = np.array([0,0,1])
+    w = np.sin(raan) * np.sin(i) * ihat + np.cos(raan) * np.sin(i) * jhat + np.cos(i) * khat
+
+    return w
+
+
+def node_line(kepler_elements: np.ndarray[float]) -> list[float]:
+    """Calculate the versor oriented along the line of the ascending node.
+    
+    Input:
+        kepler_elements: Keplerian elements of an object.
+    Returns:
+        w: versor of line of the ascending node.
+    """
+
+    i = kepler_elements[2]
+    raan = kepler_elements[4]
+    ihat = np.array([1,0,0])
+    jhat = np.array([0,1,0])
+    khat = np.array([0,0,1])
+    n = np.cos(raan) * ihat + np.sin(raan) * jhat
+
+    return n
+
+
+###############################################################################
+# Unit Test
+###############################################################################
 
 def unit_test_tca():
     '''
