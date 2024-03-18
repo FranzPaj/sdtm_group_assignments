@@ -39,7 +39,7 @@ from scipy.special import erfcinv
 import pickle
 import time
 
-import TudatPropagator as prop
+import pycode.TudatPropagator as prop
 
 ###############################################################################
 # Basic I/O
@@ -261,6 +261,7 @@ def compute_euclidean_distance(r_A, r_B):
     d = np.linalg.norm(r_A - r_B)
 
     return d
+
 
 def montecarlo_Pc_final(r_A, r_B, P_A, P_B, HBR):
     # Generate samples at initial time
@@ -490,8 +491,6 @@ def compute_TCA(X1, X2, trange, rso1_params, rso2_params, int_params,
         rho_list = [rho_list[ii] for ii in sorted_inds]
     
     return T_list, rho_list
-
-
 
 
 def gvec_tudat(t0, tvec, X1, X2, rso1_params, rso2_params, int_params, bodies):
