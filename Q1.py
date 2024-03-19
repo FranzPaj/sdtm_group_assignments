@@ -40,7 +40,9 @@ distance_geom = 10 * 10**3  # Acceptable Euclidean distance - m
 obj_dict = util.geometrical_filter(my_sat, obj_dict, distance_geom)
 # 15 remaining
 # print(len(obj_dict.keys()))
-
+for norad_id in obj_dict.keys():
+    obj = obj_dict[norad_id]
+    print('Object perigee [km]:',obj.rp / 1000, '| Object apogee [km]:', obj.ra / 1000)
 
 ########## TCA Assessment ##########
 
