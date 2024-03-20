@@ -42,8 +42,10 @@ import time
 from tudatpy.astro.time_conversion import epoch_from_date_time_components
 from tudatpy.astro.element_conversion import cartesian_to_keplerian
 from tudatpy.interface import spice 
-import pycode.TudatPropagator as prop
-# import TudatPropagator as prop  # For unit testing
+if __name__ == '__main__':
+    import TudatPropagator as prop  # For unit testing
+else:
+    import pycode.TudatPropagator as prop
 
 
 ###############################################################################
@@ -58,6 +60,7 @@ class Object:
 
         # Define the orbital elements and characteristic of a certain spacecraft or debris
         self.NORAD_ID = elem  # NORAD ID of the element
+        self.obj_dict = obj_dict[elem]
         # Object epoch
         self.utc = obj_dict[elem]['UTC']  # UTC of the time corresponding to the object state
         self.epoch = epoch_from_date_time_components(
@@ -155,7 +158,7 @@ def perigee_apogee_filter(my_sat: Object, obj_dict: dict[Object], acceptable_rad
     return obj_dict
 
 
-def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclidean_distance: float) -> list[Object]:
+def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclidean_distance: float) -> tuple[list[Object], np.ndarray[float]]:
     """Geometrical filter that eliminates possible conjunctions if the minimum euclidean distance between the orbits 
     of the object and of the possible impactor is bigger than a given distance. The naming convention follows from 
     Hoots et al. (1984).
@@ -166,15 +169,20 @@ def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclid
         acceptable_radial_distance: radial separation sufficient to rule out conjunction.
     Returns:
         obj_list: updated list of possible impactors. 
+        rel_dist_results: minimum relative distances between the orbits.
     """
 
-    delete_ls = list()
+    delete_ls = list()  # List of impossible impactors
+    rel_dist_results = np.zeros(len(obj_dict.keys()))
+
     # Define orbital elements of my_sat
     w_p = orbit_orientation(my_sat.keplerian_state)
     n_p = node_line(my_sat.keplerian_state)
     omega_p = my_sat.keplerian_state[3]
     ecc_p = my_sat.keplerian_state[1]
     sma_p = my_sat.keplerian_state[0]
+
+    i=0
     # Find impossible conjunctions
     for norad_id in obj_dict.keys(): 
         obj = obj_dict[norad_id]
@@ -189,91 +197,63 @@ def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclid
         i_r = np.arcsin(np.linalg.norm(k_vec))
         Delta_p = np.arccos(np.dot(k_vec,n_p) / np.linalg.norm(k_vec))
         Delta_s = np.arccos(np.dot(k_vec,n_s) / np.linalg.norm(k_vec))
-        # Find optimal true anomalies
-        h = 2*np.pi
-        k = 2*np.pi
-        angle_th = np.deg2rad(0.0001)
 
-        # Search for point 1
+        # Search for point 1 and 2
         fp = Delta_p - omega_p
         fs = Delta_s - omega_s
-        while np.abs(h) > angle_th or np.abs(k) > angle_th:
-            # print(np.rad2deg(h),np.rad2deg(k), np.rad2deg(angle_th))
-            ur_p = fp + omega_p - Delta_p
-            ur_s = fs + omega_s - Delta_s
-            r_p = sma_p * (1 - ecc_p**2) / (1 + ecc_p * np.cos(fp))
-            r_s = sma_s * (1 - ecc_s**2) / (1 + ecc_s * np.cos(fs))
-            ax_p = ecc_p * np.cos(omega_p - Delta_p)
-            ay_p = ecc_p * np.sin(omega_p - Delta_p)
-            ax_s = ecc_s * np.cos(omega_s - Delta_s)
-            ay_s = ecc_s * np.sin(omega_s - Delta_s)
-            A = np.sin(ur_p) + ay_p
-            B = np.cos(ur_p) + ax_p
-            C = np.sin(ur_s) + ay_s
-            D = np.cos(ur_s) + ax_s
-            gamma = np.arccos(np.cos(ur_p) * np.cos(ur_s) + np.sin(ur_p) * np.sin(ur_s) * np.cos(i_r))
-            E_p = 2 * np.arctan(np.sqrt((1 - ecc_p)/(1+ecc_p)) * np.tan(fp/2))
-            E_s = 2 * np.arctan(np.sqrt((1 - ecc_s)/(1+ecc_s)) * np.tan(fs/2))
+        r_rel_ls = [-999, -999]
+        # Define threshold for iterative convergence
+        angle_th = np.deg2rad(0.000001)
 
-            F = r_p * ecc_p * np.sin(fp) + r_s * (A * np.cos(ur_s) - B * np.cos(i_r) * np.sin(ur_s))
-            G = r_s * ecc_s * np.sin(fs) + r_p * (C * np.cos(ur_p) - D * np.cos(i_r) * np.sin(ur_p))
-            dF_dfp = r_p * ecc_p * np.cos(E_p) + r_s * np.cos(gamma)
-            dF_dfs = - r_s / (1 + ecc_s * np.cos(fs)) * (A * C + B * D * np.cos(i_r))
-            dG_dfp = - r_p / (1 + ecc_p * np.cos(fp)) * (A * C + B * D * np.cos(i_r))
-            dG_dfs = r_s * ecc_s * np.cos(E_s) + r_p * np.cos(gamma)
+        for j in range(2):
+            
+            # Look first for case 1, then for case 2 on the opposite side of the orbit
+            fp = fp + j * np.pi
+            fs = fs + j * np.pi
+            # Initialise convergence factors
+            h = 2*np.pi
+            k = 2*np.pi
 
-            h = (F * dG_dfs - G * dF_dfs) / (dF_dfs * dG_dfp - dF_dfp * dG_dfs)
-            k = (G * dF_dfp - F * dG_dfp) / (dF_dfs * dG_dfp - dF_dfp * dG_dfs) 
+            # Look for minimum distance with iterative method
+            while np.abs(h) > angle_th or np.abs(k) > angle_th:
 
-            # # DEBUG
-            # r_rel = np.sqrt(r_p**2 + r_s**2 - 2 * r_p * r_s * np.cos(gamma))
-            # print('Relative distance at iteration:',r_rel)
+                # Lots of ugly orbital maths - following Hoots et al.
+                ur_p = fp + omega_p - Delta_p
+                ur_s = fs + omega_s - Delta_s
+                r_p = sma_p * (1 - ecc_p**2) / (1 + ecc_p * np.cos(fp))
+                r_s = sma_s * (1 - ecc_s**2) / (1 + ecc_s * np.cos(fs))
+                ax_p = ecc_p * np.cos(omega_p - Delta_p)
+                ay_p = ecc_p * np.sin(omega_p - Delta_p)
+                ax_s = ecc_s * np.cos(omega_s - Delta_s)
+                ay_s = ecc_s * np.sin(omega_s - Delta_s)
+                A = np.sin(ur_p) + ay_p
+                B = np.cos(ur_p) + ax_p
+                C = np.sin(ur_s) + ay_s
+                D = np.cos(ur_s) + ax_s
+                gamma = np.arccos(np.cos(ur_p) * np.cos(ur_s) + np.sin(ur_p) * np.sin(ur_s) * np.cos(i_r))
+                E_p = 2 * np.arctan(np.sqrt((1 - ecc_p)/(1+ecc_p)) * np.tan(fp/2))
+                E_s = 2 * np.arctan(np.sqrt((1 - ecc_s)/(1+ecc_s)) * np.tan(fs/2))
 
-            fp = fp + h
-            fs = fs + k
+                F = r_p * ecc_p * np.sin(fp) + r_s * (A * np.cos(ur_s) - B * np.cos(i_r) * np.sin(ur_s))
+                G = r_s * ecc_s * np.sin(fs) + r_p * (C * np.cos(ur_p) - D * np.cos(i_r) * np.sin(ur_p))
+                dF_dfp = r_p * ecc_p * np.cos(E_p) + r_s * np.cos(gamma)
+                dF_dfs = - r_s / (1 + ecc_s * np.cos(fs)) * (A * C + B * D * np.cos(i_r))
+                dG_dfp = - r_p / (1 + ecc_p * np.cos(fp)) * (A * C + B * D * np.cos(i_r))
+                dG_dfs = r_s * ecc_s * np.cos(E_s) + r_p * np.cos(gamma)
 
-        r_rel_1 = np.sqrt(r_p**2 + r_s**2 - 2 * r_p * r_s * np.cos(gamma))
+                h = (F * dG_dfs - G * dF_dfs) / (dF_dfs * dG_dfp - dF_dfp * dG_dfs)
+                k = (G * dF_dfp - F * dG_dfp) / (dF_dfs * dG_dfp - dF_dfp * dG_dfs) 
 
-        # Search for point 2
-        h = 2*np.pi
-        k = 2*np.pi
-        fp = fp + np.pi
-        fs = fs + np.pi
-        while np.abs(h) > angle_th or np.abs(k) > angle_th:
-            # print(np.rad2deg(h),np.rad2deg(k), np.rad2deg(angle_th))
-            ur_p = fp + omega_p - Delta_p
-            ur_s = fs + omega_s - Delta_s
-            r_p = sma_p * (1 - ecc_p**2) / (1 + ecc_p * np.cos(fp))
-            r_s = sma_s * (1 - ecc_s**2) / (1 + ecc_s * np.cos(fs))
-            ax_p = ecc_p * np.cos(omega_p - Delta_p)
-            ay_p = ecc_p * np.sin(omega_p - Delta_p)
-            ax_s = ecc_s * np.cos(omega_s - Delta_s)
-            ay_s = ecc_s * np.sin(omega_s - Delta_s)
-            A = np.sin(ur_p) + ay_p
-            B = np.cos(ur_p) + ax_p
-            C = np.sin(ur_s) + ay_s
-            D = np.cos(ur_s) + ax_s
-            gamma = np.arccos(np.cos(ur_p) * np.cos(ur_s) + np.sin(ur_p) * np.sin(ur_s) * np.cos(i_r))
-            E_p = 2 * np.arctan(np.sqrt((1 - ecc_p)/(1 + ecc_p)) * np.tan(fp/2))
-            E_s = 2 * np.arctan(np.sqrt((1 - ecc_s)/(1 + ecc_s)) * np.tan(fs/2))
+                fp = fp + h
+                fs = fs + k
 
-            F = r_p * ecc_p * np.sin(fp) + r_s * (A * np.cos(ur_s) - B * np.cos(i_r) * np.sin(ur_s))
-            G = r_s * ecc_s * np.sin(fs) + r_p * (C * np.cos(ur_p) - D * np.cos(i_r) * np.sin(ur_p))
-            dF_dfp = r_p * ecc_p * np.cos(E_p) + r_s * np.cos(gamma)
-            dF_dfs = - r_s / (1 + ecc_s * np.cos(fs)) * (A * C + B * D * np.cos(i_r))
-            dG_dfp = - r_p / (1 + ecc_p * np.cos(fp)) * (A * C + B * D * np.cos(i_r))
-            dG_dfs = r_s * ecc_s * np.cos(E_s) + r_p * np.cos(gamma)
+            r_rel_ls[j] = np.sqrt(r_p**2 + r_s**2 - 2 * r_p * r_s * np.cos(gamma))
+        
 
-            h = (F * dG_dfs - G * dF_dfs) / (dF_dfs * dG_dfp - dF_dfp * dG_dfs)
-            k = (G * dF_dfp - F * dG_dfp) / (dF_dfs * dG_dfp - dF_dfp * dG_dfs) 
-
-            fp = fp + h
-            fs = fs + k
-
-        r_rel_2 = np.sqrt(r_p**2 + r_s**2 - 2 * r_p * r_s * np.cos(gamma))
-
-        r_rel = min([r_rel_1, r_rel_2])
-
+        r_rel = min(r_rel_ls)
+        rel_dist_results[i] = r_rel
+        i = i+1
+        # Identify impossible impactors
         if r_rel > acceptable_euclidean_distance:
             delete_ls.append(norad_id)
 
@@ -281,7 +261,7 @@ def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclid
     for norad_id in delete_ls:
         obj_dict.pop(norad_id)
 
-    return obj_dict
+    return obj_dict, rel_dist_results
 
 
 ###############################################################################
@@ -589,11 +569,11 @@ def compute_TCA(X1, X2, trange, rso1_params, rso2_params, int_params,
     tmin = 0.
     while b <= trange[1]:
         
-        print('')
-        print('current interval [t0, tf]')
-        print(a, b)
-        print('dt [sec]', b-a)
-        print('dt total [hours]', (b-trange[0])/3600.)
+        # print('')
+        # print('current interval [t0, tf]')
+        # print(a, b)
+        # print('dt [sec]', b-a)
+        # print('dt total [hours]', (b-trange[0])/3600.)
     
         # Determine Chebyshev-Gauss-Lobato node locations
         tvec = compute_CGL_nodes(a, b, N)
