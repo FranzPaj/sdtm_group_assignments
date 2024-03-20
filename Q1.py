@@ -4,6 +4,7 @@ import inspect
 
 from tudatpy import constants
 import pycode.ConjunctionUtilities as util
+from pycode.TudatPropagator import *
 
 ####################################
 ########## Initialisation ##########

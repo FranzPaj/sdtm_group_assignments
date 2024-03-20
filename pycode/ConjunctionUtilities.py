@@ -86,6 +86,10 @@ class Object:
         self.ra = self.sma * (1 + self.ecc)  # Radius of apoapsis
         self.T_orb = 2 * np.pi * np.sqrt(self.sma**3 / mu_e)
 
+        # to propagate at TCA
+        self.tf = None
+        self.Xf = None
+        self.Pf = None
 
     def time2theta(self, theta:float) -> float:
         theta0 = self.keplerian_state[5]
