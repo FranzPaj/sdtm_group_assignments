@@ -324,6 +324,10 @@ def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable
 
     # Find impossible conjunctions
     for norad_id in obj_dict.keys(): 
+
+        # print('-----------------------')
+        # print('NORAD ID:', norad_id)
+
         obj = obj_dict[norad_id]
         # Define orbital elements of obj
         w_s = orbit_orientation(obj.keplerian_state)
@@ -408,7 +412,7 @@ def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable
             # print('------------------------')
 
             transit_ls = []
-            rev_num = int(np.ceil(tspan / rso.T_orb))
+            rev_num = int(np.ceil(tspan / rso.T_orb)) + 1
             for interval in f_ls:
                 ti0 = rso.time2theta(interval[0])
                 tf0 = rso.time2theta(interval[1])
@@ -452,9 +456,6 @@ def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable
                     t3 = obj_transit[1]
                     if t2<=t0<=t3 or t2<=t1<=t3 or t0<=t2<=t1 or t0<=t3<=t1:
                         flag_intersect = True
-        
-        print(flag_intersect)
-
 
         # Identify impossible impactors
         if flag_intersect == False:

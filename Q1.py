@@ -55,21 +55,26 @@ obj_dict_, rel_distances_geom = util.geometrical_filter(my_sat, obj_dict, distan
 # 17 remaining
 print('Geometrical filter:',len(obj_dict.keys()), 'remaining')
 
-#### BROKEN!
 # Time filter
-# distance_time = 10 * 10**3
-# obj_dict = util.time_filter(my_sat,obj_dict,tspan,distance_time)
-# print('Temporal filter:',len(obj_dict.keys()), 'remaining')
+distance_time = 10 * 10**3
+obj_dict_2 = obj_dict.copy()
+obj_dict_2 = util.time_filter(my_sat,obj_dict,tspan,distance_time)
+print('Temporal filter:',len(obj_dict.keys()), 'remaining')
 
-# print(len(obj_dict.keys()))
-for norad_id in obj_dict.keys():
-    obj = obj_dict[norad_id]
-    print('Object perigee [km]:',obj.rp / 1000, '| Object apogee [km]:', obj.ra / 1000)
+# # print(len(obj_dict.keys()))
+# for norad_id in obj_dict.keys():
+#     obj = obj_dict[norad_id]
+#     print('Object perigee [km]:',obj.rp / 1000, '| Object apogee [km]:', obj.ra / 1000)
 
 
 ####################################
 ########## TCA Assessment ##########
 ####################################
+
+print('-------------------------------')
+print('TCA Assessment')
+print('-------------------------------')
+
 
 distance_tca = 10 * 10**3  # Critical distance to identify TCAs
 delete_ls = []
@@ -118,7 +123,9 @@ for norad_id in obj_dict.keys():
         X1, X2, trange, rso1_params, rso2_params, 
         int_params, rho_min_crit = distance_tca)
     
-    print('Times for TCA:',T_list,'| rho_min:', rho_list)
+    print('NORAD ID:',norad_id)
+    print('Times for TCA [hr since epoch]:',(np.array(T_list)-tepoch)/constants.JULIAN_DAY*24,'| rho_min [m]:', rho_list)
+    print('-------------------------------')
 
     # Identify possible HIEs
     if min(rho_list) < distance_tca:
@@ -131,7 +138,7 @@ for norad_id in obj_dict.keys():
 for norad_id in delete_ls:
     obj_dict.pop(norad_id)
 # 5 remaining
-print(len(obj_dict.keys()))
+print('TCA cutoff:',len(obj_dict.keys()), 'remaining')
 
 
 ######################################
