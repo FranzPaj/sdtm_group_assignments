@@ -39,22 +39,32 @@ trange = np.array([tepoch, tepoch + tspan])
 ########## Initial filter ##########
 ####################################
 
+print(np.rad2deg(my_sat.keplerian_state[1]))
+
+print('Initial list:',len(obj_dict.keys()), 'objects')
+
 # Perigee-apogee filter
 distance_pa = 10 * 10**3  # Acceptable perigee-apogee distance - m
 obj_dict = util.perigee_apogee_filter(my_sat, obj_dict, distance_pa)
 # 17 remaining
-# print(len(obj_dict.keys()))
+print('Perigee-apogee filter:',len(obj_dict.keys()), 'remaining')
 
 # Geometrical filter
 distance_geom = 10 * 10**3  # Acceptable Euclidean distance - m
-obj_dict, rel_distances_geom = util.geometrical_filter(my_sat, obj_dict, distance_geom)  # rel_distances_geom for debugginf purposes
-# 15 remaining
-# print(len(obj_dict.keys()))
+obj_dict_, rel_distances_geom = util.geometrical_filter(my_sat, obj_dict, distance_geom)  # rel_distances_geom for debugginf purposes
+# 17 remaining
+print('Geometrical filter:',len(obj_dict.keys()), 'remaining')
+
+#### BROKEN!
+# Time filter
+# distance_time = 10 * 10**3
+# obj_dict = util.time_filter(my_sat,obj_dict,tspan,distance_time)
+# print('Temporal filter:',len(obj_dict.keys()), 'remaining')
 
 # print(len(obj_dict.keys()))
-# for norad_id in obj_dict.keys():
-#     obj = obj_dict[norad_id]
-#     print('Object perigee [km]:',obj.rp / 1000, '| Object apogee [km]:', obj.ra / 1000)
+for norad_id in obj_dict.keys():
+    obj = obj_dict[norad_id]
+    print('Object perigee [km]:',obj.rp / 1000, '| Object apogee [km]:', obj.ra / 1000)
 
 
 ####################################
@@ -120,8 +130,8 @@ for norad_id in obj_dict.keys():
 # Eliminate impossible impactors
 for norad_id in delete_ls:
     obj_dict.pop(norad_id)
-# 3 remaining
-# print(len(obj_dict.keys()))
+# 5 remaining
+print(len(obj_dict.keys()))
 
 
 ######################################
