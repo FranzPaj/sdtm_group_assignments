@@ -5,8 +5,9 @@ import inspect
 from tudatpy import constants
 import pycode.ConjunctionUtilities as util
 
-        
+####################################
 ########## Initialisation ##########
+####################################
 
 # Define path to objects datafile
 current_dir = os.path.dirname(inspect.getfile(inspect.currentframe()))
@@ -33,8 +34,10 @@ tepoch = my_sat.epoch
 tspan = 2 * constants.JULIAN_DAY
 trange = np.array([tepoch, tepoch + tspan])
 
-             
+
+####################################             
 ########## Initial filter ##########
+####################################
 
 # Perigee-apogee filter
 distance_pa = 10 * 10**3  # Acceptable perigee-apogee distance - m
@@ -54,7 +57,9 @@ obj_dict, rel_distances_geom = util.geometrical_filter(my_sat, obj_dict, distanc
 #     print('Object perigee [km]:',obj.rp / 1000, '| Object apogee [km]:', obj.ra / 1000)
 
 
+####################################
 ########## TCA Assessment ##########
+####################################
 
 distance_tca = 10 * 10**3  # Critical distance to identify TCAs
 delete_ls = []
@@ -119,11 +124,19 @@ for norad_id in delete_ls:
 # print(len(obj_dict.keys()))
 
 
+######################################
+######## Propagation to TCA ##########
+######################################
+
+
+#######################################
 ######## Detailed assessment ##########
-    
-    
+#######################################
+
+
+########################################
 ######## Manoeuvre assessment ##########
-    
+########################################  
 
 
 

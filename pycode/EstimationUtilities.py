@@ -5,8 +5,10 @@ import os
 import pandas as pd
 import pickle
 
-
-import pycode.TudatPropagator as prop
+if __name__ == '__main__':
+    import TudatPropagator as prop  # For unit testing
+else:
+    import pycode.TudatPropagator as prop
 
 
 ###############################################################################
