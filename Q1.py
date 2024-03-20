@@ -11,7 +11,7 @@ import pycode.ConjunctionUtilities as util
 
 # Define path to objects datafile
 current_dir = os.path.dirname(inspect.getfile(inspect.currentframe()))
-data_dir = os.path.join(current_dir,'data','group2')
+data_dir = os.path.join(current_dir, 'data', 'group2')
 fname = os.path.join(data_dir, 'estimated_rso_catalog.pkl')
 # Read the relevant objects datafile
 data_dict = util.read_catalog_file(fname)
@@ -34,32 +34,32 @@ tepoch = my_sat.epoch
 tspan = 2 * constants.JULIAN_DAY
 trange = np.array([tepoch, tepoch + tspan])
 
-
-####################################             
+####################################
 ########## Initial filter ##########
 ####################################
 
 print(np.rad2deg(my_sat.keplerian_state[1]))
 
-print('Initial list:',len(obj_dict.keys()), 'objects')
+print('Initial list:', len(obj_dict.keys()), 'objects')
 
 # Perigee-apogee filter
-distance_pa = 10 * 10**3  # Acceptable perigee-apogee distance - m
+distance_pa = 10 * 10 ** 3  # Acceptable perigee-apogee distance - m
 obj_dict = util.perigee_apogee_filter(my_sat, obj_dict, distance_pa)
 # 17 remaining
-print('Perigee-apogee filter:',len(obj_dict.keys()), 'remaining')
+print('Perigee-apogee filter:', len(obj_dict.keys()), 'remaining')
 
 # Geometrical filter
-distance_geom = 10 * 10**3  # Acceptable Euclidean distance - m
-obj_dict_, rel_distances_geom = util.geometrical_filter(my_sat, obj_dict, distance_geom)  # rel_distances_geom for debugginf purposes
+distance_geom = 10 * 10 ** 3  # Acceptable Euclidean distance - m
+obj_dict_, rel_distances_geom = util.geometrical_filter(my_sat, obj_dict,
+                                                        distance_geom)  # rel_distances_geom for debugginf purposes
 # 17 remaining
-print('Geometrical filter:',len(obj_dict.keys()), 'remaining')
+print('Geometrical filter:', len(obj_dict.keys()), 'remaining')
 
 # Time filter
-distance_time = 10 * 10**3
+distance_time = 10 * 10 ** 3
 obj_dict_2 = obj_dict.copy()
-obj_dict_2 = util.time_filter(my_sat,obj_dict,tspan,distance_time)
-print('Temporal filter:',len(obj_dict.keys()), 'remaining')
+obj_dict_2 = util.time_filter(my_sat, obj_dict, tspan, distance_time)
+print('Temporal filter:', len(obj_dict.keys()), 'remaining')
 
 # # print(len(obj_dict.keys()))
 # for norad_id in obj_dict.keys():
@@ -75,8 +75,7 @@ print('-------------------------------')
 print('TCA Assessment')
 print('-------------------------------')
 
-
-distance_tca = 10 * 10**3  # Critical distance to identify TCAs
+distance_tca = 10 * 10 ** 3  # Critical distance to identify TCAs
 delete_ls = []
 
 for norad_id in obj_dict.keys():
@@ -84,7 +83,7 @@ for norad_id in obj_dict.keys():
     obj = obj_dict[norad_id]
     # Define relevant bodies
     bodies_to_create = ['Sun', 'Earth', 'Moon']
-    # bodies = prop.tudat_initialize_bodies(bodies_to_create) 
+    # bodies = prop.tudat_initialize_bodies(bodies_to_create)
 
     # Define initial cartesian states
     X1 = my_sat.cartesian_state
@@ -97,17 +96,17 @@ for norad_id in obj_dict.keys():
     rso1_params['Cd'] = my_sat.Cd
     rso1_params['Cr'] = my_sat.Cr
     rso1_params['sph_deg'] = 8
-    rso1_params['sph_ord'] = 8    
+    rso1_params['sph_ord'] = 8
     rso1_params['central_bodies'] = ['Earth']
     rso1_params['bodies_to_create'] = bodies_to_create
-    # rso2 state params    
+    # rso2 state params
     rso2_params = {}
     rso2_params['mass'] = obj.mass
     rso2_params['area'] = obj.area
     rso2_params['Cd'] = obj.Cd
     rso2_params['Cr'] = obj.Cr
     rso2_params['sph_deg'] = 8
-    rso2_params['sph_ord'] = 8    
+    rso2_params['sph_ord'] = 8
     rso2_params['central_bodies'] = ['Earth']
     rso2_params['bodies_to_create'] = bodies_to_create
     # Define integration parameters
@@ -120,11 +119,12 @@ for norad_id in obj_dict.keys():
     int_params['atol'] = 1e-12
     # Find TCA
     T_list, rho_list = util.compute_TCA(
-        X1, X2, trange, rso1_params, rso2_params, 
-        int_params, rho_min_crit = distance_tca)
-    
-    print('NORAD ID:',norad_id)
-    print('Times for TCA [hr since epoch]:',(np.array(T_list)-tepoch)/constants.JULIAN_DAY*24,'| rho_min [m]:', rho_list)
+        X1, X2, trange, rso1_params, rso2_params,
+        int_params, rho_min_crit=distance_tca)
+
+    print('NORAD ID:', norad_id)
+    print('Times for TCA [hr since epoch]:', (np.array(T_list) - tepoch) / constants.JULIAN_DAY * 24, '| rho_min [m]:',
+          rho_list)
     print('-------------------------------')
 
     # Identify possible HIEs
@@ -138,13 +138,76 @@ for norad_id in obj_dict.keys():
 for norad_id in delete_ls:
     obj_dict.pop(norad_id)
 # 5 remaining
-print('TCA cutoff:',len(obj_dict.keys()), 'remaining')
-
+print('TCA cutoff:', len(obj_dict.keys()), 'remaining')
 
 ######################################
 ######## Propagation to TCA ##########
 ######################################
 
+bodies_to_create = ['Sun', 'Earth', 'Moon']
+
+sat_params = {}
+sat_params['mass'] = my_sat.mass
+sat_params['area'] = my_sat.area
+sat_params['Cd'] = my_sat.Cd
+sat_params['Cr'] = my_sat.Cr
+sat_params['sph_deg'] = 8
+sat_params['sph_ord'] = 8
+sat_params['central_bodies'] = ['Earth']
+sat_params['bodies_to_create'] = bodies_to_create
+Xo_sat = my_sat.cartesian_state
+Po_sat = my_sat.covar
+
+# intergator parameters
+int_params = {'tudat_integrator': 'rkf78', 'step': 10., 'max_step': 1000., 'min_step': 1e-3, 'rtol': 1e-12,
+              'atol': 1e-12}
+
+for norad_id in obj_dict.keys():
+
+    obj = obj_dict[norad_id]
+    Xo = obj.cartesian_state
+    Po = obj.covar
+
+    rso_params = {'mass': obj.mass, 'area': obj.area, 'Cd': obj.Cd, 'Cr': obj.Cr, 'sph_deg': 8,
+                  'sph_ord': 8, 'central_bodies': ['Earth'], 'bodies_to_create': bodies_to_create}
+
+    tf = np.zeros(len(obj.tca_T_list))
+    Xf = np.zeros(shape=(6, len(obj.tca_T_list)))
+    Pf = np.zeros(shape=(6, 6*len(obj.tca_T_list)))
+
+    prop = {'tf': np.array([]), 'Xf': np.array([]), 'Pf': np.array([])}
+
+    for i in range(len(obj.tca_T_list)):
+        tvec = np.array([obj.epoch, obj.tca_T_list[i]])
+        tf[i], Xf_new, Pf_matrix = propagate_state_and_covar(Xo, Po, tvec, rso_params, int_params)
+        Xf[:, i] = Xf_new.reshape((6, ))
+        inx = 6*i
+        Pf[:, inx:(inx+6)] = Pf_matrix
+
+        tvec_sat = np.array([my_sat.epoch, obj.tca_T_list[i]])
+        tf_sat, Xf_sat, Pf_matrix_sat = propagate_state_and_covar(Xo_sat, Po_sat, tvec_sat, sat_params, int_params)
+
+        if prop['tf'].size == 0:
+            prop['tf'] = tf_sat
+        else:
+            prop['tf'] = [prop['tf'], tf_sat]
+
+        if prop['Xf'].size == 0:
+            prop['Xf'] = Xf_sat
+        else:
+            prop['Xf'] = np.column_stack((prop['Xf'], Xf_sat))
+
+        if prop['Pf'].size == 0:
+            prop['Pf'] = Pf_matrix_sat
+        else:
+            prop['Pf'] = np.column_stack((prop['Pf'], Pf_matrix_sat))
+
+    # print(my_sat.norad_id)
+    obj.tf = tf
+    obj.Xf = Xf
+    obj.Pf = Pf
+
+    setattr(my_sat, str(norad_id), prop)
 
 #######################################
 ######## Detailed assessment ##########
@@ -153,7 +216,10 @@ print('TCA cutoff:',len(obj_dict.keys()), 'remaining')
 
 ########################################
 ######## Manoeuvre assessment ##########
-########################################  
+########################################
+
+
+
 
 
 

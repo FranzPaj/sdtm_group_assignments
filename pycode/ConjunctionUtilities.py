@@ -99,7 +99,10 @@ class Object:
         E = element_conversion.true_to_eccentric_anomaly(theta, self.ecc)
         return E
 
-
+        # to propagate at TCA
+        self.tf = None
+        self.Xf = None
+        self.Pf = None
 ###############################################################################
 # Basic I/O
 ###############################################################################
