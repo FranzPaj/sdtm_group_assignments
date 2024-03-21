@@ -198,7 +198,9 @@ def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclid
     rel_dist_results = np.zeros(len(obj_dict.keys()))
 
     # Define orbital elements of my_sat
-    w_p = orbit_orientation(my_sat.keplerian_state)
+    w_p_original = orbit_orientation(my_sat.keplerian_state)
+    w_p = np.cross(my_sat.cartesian_state.flatten()[:3],my_sat.cartesian_state.flatten()[3:6])
+    w_p = w_p / np.linalg.norm(w_p)
     n_p = node_line(my_sat.keplerian_state)
     raan_p = my_sat.keplerian_state[4]
     omega_p = my_sat.keplerian_state[3]
@@ -212,7 +214,10 @@ def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclid
 
         obj = obj_dict[norad_id]
         # Define orbital elements of obj
-        w_s = orbit_orientation(obj.keplerian_state)
+        w_s_original = orbit_orientation(obj.keplerian_state)
+        w_s = np.cross(obj.cartesian_state.flatten()[:3],obj.cartesian_state.flatten()[3:6])
+        w_s = w_s / np.linalg.norm(w_s)
+        # print(w_s_original, w_s)
         n_s = node_line(obj.keplerian_state)
         raan_s = obj.keplerian_state[4]
         omega_s = obj.keplerian_state[3]
@@ -224,10 +229,10 @@ def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclid
         i_r = np.arccos(np.dot(w_s, w_p))
         # print(np.linalg.norm(k_vec), np.sin(i_r))  # SAME!
 
-        # Delta_p = np.arccos(np.dot(k_vec,n_p) / np.linalg.norm(k_vec))
-        Delta_p = np.arccos(1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) - np.sin(incl_s) * np.cos(incl_p) * np.cos(raan_p - raan_s)))
-        # Delta_s = np.arccos(np.dot(k_vec,n_s) / np.linalg.norm(k_vec))
-        Delta_s = np.arccos(1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) * np.cos(raan_p - raan_s) - np.sin(incl_s) * np.cos(incl_p) ))
+        Delta_p = np.arccos(np.dot(k_vec,n_p) / np.linalg.norm(k_vec))
+        # Delta_p = np.arccos(1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) - np.sin(incl_s) * np.cos(incl_p) * np.cos(raan_p - raan_s)))
+        Delta_s = np.arccos(np.dot(k_vec,n_s) / np.linalg.norm(k_vec))
+        # Delta_s = np.arccos(1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) * np.cos(raan_p - raan_s) - np.sin(incl_s) * np.cos(incl_p) ))
         # Eliminate quadrant ambiguity
         sin_Delta_p = 1 / np.sin(i_r) * (np.sin(incl_s) * np.sin(raan_p - raan_s))
         if sin_Delta_p < 0:
@@ -236,7 +241,7 @@ def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclid
         if sin_Delta_s < 0:
             Delta_s = - Delta_s
         
-        # print(np.cos(Delta_p), 1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) - np.sin(incl_s) * np.cos(incl_p) * np.cos(raan_p - raan_s)))
+        print(np.cos(Delta_p), 1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) - np.sin(incl_s) * np.cos(incl_p) * np.cos(raan_p - raan_s)))
         # SHOULD BE SAME!!!
 
         # Search for point 1 and 2 - initial search values
@@ -324,6 +329,9 @@ def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable
 
     # Define orbital elements of my_sat
     w_p = orbit_orientation(my_sat.keplerian_state)
+    w_p = np.cross(my_sat.cartesian_state.flatten()[:3],my_sat.cartesian_state.flatten()[3:6])
+    w_p = w_p / np.linalg.norm(w_p)
+    n_p = node_line(my_sat.keplerian_state)
     # Define elements for quadrant ambiguity correction
     incl_p = my_sat.keplerian_state[2]
     raan_p = my_sat.keplerian_state[4]
@@ -338,6 +346,9 @@ def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable
         obj = obj_dict[norad_id]
         # Define orbital elements of obj
         w_s = orbit_orientation(obj.keplerian_state)
+        w_s = np.cross(obj.cartesian_state.flatten()[:3],obj.cartesian_state.flatten()[3:6])
+        w_s = w_s / np.linalg.norm(w_s)
+        n_s = node_line(obj.keplerian_state)
         # Calculate relevant vectors
         k_vec = np.cross(w_s, w_p)
         i_r = np.arccos(np.dot(w_s, w_p))
@@ -345,10 +356,10 @@ def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable
         incl_s = obj.keplerian_state[2]
         raan_s = obj.keplerian_state[4]
         
-        # Delta_p = np.arccos(np.dot(k_vec,n_p) / np.linalg.norm(k_vec))
-        Delta_p = np.arccos(1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) - np.sin(incl_s) * np.cos(incl_p) * np.cos(raan_p - raan_s)))
-        # Delta_s = np.arccos(np.dot(k_vec,n_s) / np.linalg.norm(k_vec))
-        Delta_s = np.arccos(1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) * np.cos(raan_p - raan_s) - np.sin(incl_s) * np.cos(incl_p) ))
+        Delta_p = np.arccos(np.dot(k_vec,n_p) / np.linalg.norm(k_vec))
+        # Delta_p = np.arccos(1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) - np.sin(incl_s) * np.cos(incl_p) * np.cos(raan_p - raan_s)))
+        Delta_s = np.arccos(np.dot(k_vec,n_s) / np.linalg.norm(k_vec))
+        # Delta_s = np.arccos(1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) * np.cos(raan_p - raan_s) - np.sin(incl_s) * np.cos(incl_p) ))
         Delta_corr = [Delta_p, Delta_s]
         sin_Delta_p = 1 / np.sin(i_r) * (np.sin(incl_s) * np.sin(raan_p - raan_s))
         if sin_Delta_p < 0:
