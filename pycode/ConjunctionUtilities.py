@@ -640,10 +640,10 @@ def remediate_covariance(Praw, Lclip, Lraw=[], Vraw=[]):
     return Prem, Pdet, Pinv, posdef_status, clip_status
 
 
-def compute_mahalanobis_distance(r_A, r_B, P_A, P_B):
+def compute_mahalanobis_distance(x_A, x_B, P_A, P_B):
     Psum = P_A + P_B
     invP = np.linalg.inv(Psum)
-    diff = r_A - r_B
+    diff = x_A - x_B
     M = float(np.sqrt(np.dot(diff.T, np.dot(invP, diff)))[0, 0])
 
     return M

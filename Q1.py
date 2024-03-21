@@ -213,11 +213,35 @@ for norad_id in obj_dict.keys():
 #######################################
 ######## Detailed assessment ##########
 #######################################
+print('-------------------------------')
+print('Detailed assessment')
+print('-------------------------------')
 
+for norad_id in obj_dict.keys():
+    obj = obj_dict[norad_id]
+    norad_id_str = str(norad_id)
+    print('RSO :', norad_id_str)
 
+    Xf_sat = getattr(my_sat, norad_id_str)['Xf']
+    Pf_sat = getattr(my_sat, norad_id_str)['Pf']
+
+    Xf_rso = obj.Xf
+    Pf_rso = obj.Pf
+
+    HBR = np.sqrt(my_sat.area/np.pi) + np.sqrt(obj.area/np.pi)
+    Pc = util.Pc2D_Foster(Xf_sat, Pf_sat, Xf_rso, Pf_rso, HBR, rtol=1e-8, HBR_type='circle')
+
+    M = util.compute_mahalanobis_distance(Xf_sat[0:3], Xf_rso[0:3], Pf_sat[0:3, 0:3], Pf_rso[0:3, 0:3])
+    d = util.compute_euclidean_distance(Xf_sat[0:3], Xf_rso[0:3])
+
+    print('Mahalanobis distance:\t\t\t\t ', M)
+    print('Foster Probability of collision:\t ', Pc)
+    print('-------------------------------')
+pass
 ########################################
 ######## Manoeuvre assessment ##########
 ########################################
+
 
 
 
