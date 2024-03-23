@@ -16,14 +16,10 @@ num_obj = size(M,1);
 %%
 
 for i = 1:num_obj
-    a = 'NUOVO OGGETTO'
-    i
-    if i == 3 
-        continue
-    end
-    if i == 4
-        continue
-    end
+    
+    disp('-------------------------------------------')
+    disp(join(['RSO: ',noradid2]))
+
     noradid1 = int2str(int32(M(i,45)));
     A1 = M(i,46);
     r1 = M(i,47:49);
@@ -56,7 +52,8 @@ for i = 1:num_obj
     
     %%
     
-    % Change to NASA convention
+    % Change to NASA convention - weird mixed measurement units
+    % r_J2K and v_J2K in km, C_J2K in m
     r1_J2K = r1 / 1000;
     v1_J2K = v1 / 1000;
     C1_J2K = P1;
@@ -67,7 +64,17 @@ for i = 1:num_obj
     % Calculate 2D PC            
     Pc2D = Pc2D_Foster(r1_J2K*1000,v1_J2K*1000,C1_J2K,r2_J2K*1000,v2_J2K*1000,C2_J2K,HBR,1e-8,'circle');
     
-    % Estimate NUmer of Samples
+    % If PC too small -> it's going to break
+    % Pass to the next object
+    if Pc2D < 1e-6
+        filename = join([out_dir, '/Pc_foster.dat']);
+        writematrix(Pc2D,filename) 
+        warning(['object ignored as Pc2D < 1e-6'])
+        continue
+    end 
+
+
+    % Estimate Number of Samples
     Nsample_kep = EstimateRequiredSamples(Pc2D,Accuracy*0.75,MC_Confidence);
     Nsample_kep = max(1e2,Nsample_kep);
     Nsample_kep = min(1e10,Nsample_kep);
@@ -145,6 +152,9 @@ for i = 1:num_obj
     
     filename = join([out_dir, '/Pc_MonteCarlo.dat']);
     writematrix(actSolution,filename)  
+
+    filename = join([out_dir, '/NumSamples_MonteCarlo.dat']);
+    writematrix(Nsample_kep,filename)  
 
 end
 
