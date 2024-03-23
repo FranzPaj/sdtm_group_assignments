@@ -270,11 +270,3 @@ for norad_id in obj_dict.keys():
 
     print('CDM generated and saved in: ', filename)
     print('\n-------------------------------')
-
-
-
-
-
-
-
-
