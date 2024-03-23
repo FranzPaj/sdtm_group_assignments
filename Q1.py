@@ -1,6 +1,8 @@
 import numpy as np
 import os
 import inspect
+from math import ceil, log
+from pycode.CDM import write_cdm
 
 from tudatpy import constants
 import pycode.ConjunctionUtilities as util
@@ -224,6 +226,7 @@ for norad_id in obj_dict.keys():
 
     Xf_sat = getattr(my_sat, norad_id_str)['Xf']
     Pf_sat = getattr(my_sat, norad_id_str)['Pf']
+    # print(Pf_sat[0:3, 0:3])
 
     Xf_rso = obj.Xf
     Pf_rso = obj.Pf
@@ -236,11 +239,38 @@ for norad_id in obj_dict.keys():
 
     print('Mahalanobis distance:\t\t\t\t ', M)
     print('Foster Probability of collision:\t ', Pc)
-    print('-------------------------------')
-pass
-########################################
-######## Manoeuvre assessment ##########
-########################################
+    # print('Euclidean distance:\t ', d)
+
+    ''' Broken for now (Pc not psd)
+    if Pc > 1e-6:
+        N_Mc = 10**(ceil(log(1/Pc * 10, 10)))
+        print('Number of points for Montecarlo analysis:\t', N_Mc)
+
+        P_mc = util.montecarlo_Pc_final(Xf_sat[0:3], Xf_rso[0:3], Pf_sat[0:3, 0:3], Pf_rso[0:3, 0:3], HBR, N=N_Mc)
+        print('Montecarlo Probability of collision:\t', P_mc)
+    '''
+
+    Xf_sat_ric = util.eci2ric(Xf_sat[0:3], Xf_sat[3:6], Xf_sat[0:3])
+    Xf_obj_ric = util.eci2ric(Xf_sat[0:3], Xf_sat[3:6], Xf_rso[0:3])
+    print('Radial distance:\t\t\t\t ', np.abs(Xf_sat_ric[0] - Xf_obj_ric[0])[0])
+    print('Along Track distance:\t\t\t ', np.abs(Xf_obj_ric[1])[0])
+    print('Cross Track distance:\t\t\t ', np.abs(Xf_obj_ric[2])[0])
+
+    print('USEFUL INFORMATION')
+    rel_pos = Xf_rso[0:3] - Xf_sat[0:3]
+    rel_vel = Xf_rso[3:6] - Xf_sat[3:6]
+    rel_pos_ric = util.eci2ric(Xf_sat[0:3], Xf_sat[3:6], rel_pos)
+    rel_vel_ric = util.eci2ric_vel(Xf_sat[0:3], Xf_sat[3:6], rel_pos_ric, rel_vel)
+    print('Relative Velocity in ECI:\n', rel_vel)
+    print('Relative Velocity in RSW:\n', rel_vel_ric)
+
+    # write_cdm(epoch, tca, d_euc, speed, rel_pos_ric, Pc, norad_rso, x_sat, x_rso, P_sat, P_rso)
+    filename = write_cdm(obj.utc, obj.tca_T_list[0], d, np.linalg.norm(rel_vel), rel_pos_ric,
+                         Pc, norad_id, Xf_sat, Xf_rso, Pf_sat, Pf_rso)
+
+    print('CDM generated and saved in: ', filename)
+    print('\n-------------------------------')
+
 
 
 

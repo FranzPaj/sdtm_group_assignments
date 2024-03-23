@@ -481,6 +481,6 @@ def propagate_state_and_covar(Xo, Po, tvec, state_params, int_params, bodies=Non
     Pf = np.dot(chi_diff, np.dot(diagWc, chi_diff.T))
 
     # Output single mean state not computed average of sigma points
-    Xf = chi_v[0:6].reshape(6,1)\
+    Xf = chi_v[0:6].reshape(6,1)
     
     return tf, Xf, Pf

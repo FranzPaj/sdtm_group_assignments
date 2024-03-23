@@ -1,0 +1,80 @@
+CONJUNCTION DATA MESSAGE
+Creation Date                      2024-03-21 T12:00:00          
+
+RELATIVE DATA
+TCA                                2024-03-22 T20:59:58          
+Miss Distance                      2.97315                       [m]
+Relative Speed                     500                           [m/s]
+Relative Position R                2.07262                       [m]
+Relative Position I                -2.13164                      [m]
+Relative Position C                -0.000254734                  [m]
+Collision Probability              0.00180211                    
+Collision Probability method       Foster                        
+
+OBJECTS DATA
+Object                             Satellite                     
+Norad ID                           40920                         
+Object Name                        Sky Muster                    
+Covariance Method                  Calculated                    
+Maneuverable                       Yes                           
+Reference Frame                    ECI                           
+X                                  4201.56                       [km]
+Y                                  -41953.5                      [km]
+Z                                  0.86428                       [km]
+X_dot                              3.05937                       [km/s]
+Y_dot                              0.307064                      [km/s]
+Z_dot                              -0.00728185                   [km/s]
+Cx_x                               67590.4                       [m**2]
+Cy_x                               13869.1                       [m**2]
+Cy_y                               2848.35                       [m**2]
+Cz_x                               -160.804                      [m**2]
+Cz_y                               -33.0031                      [m**2]
+Cz_z                               47.327                        [m**2]
+Cxdot_x                            -0.313417                     [m**2/s]
+Cxdot_y                            -0.06404                      [m**2/s]
+Cxdot_z                            0.000737963                   [m**2/s]
+Cxdot_xdot                         1.48697e-06                   [m**2/s**2]
+Cydot_x                            4.571                         [m**2/s]
+Cydot_y                            0.937886                      [m**2/s]
+Cydot_z                            -0.0108832                    [m**2/s]
+Cydot_xdot                         -2.12168e-05                  [m**2/s**2]
+Cydot_ydot                         0.000309238                   [m**2/s**2]
+Czdot_x                            -0.00156667                   [m**2/s]
+Czdot_y                            -0.000321418                  [m**2/s]
+Czdot_z                            -0.00350764                   [m**2/s]
+Czdot_xdot                         7.80956e-09                   [m**2/s**2]
+Czdot_ydot                         -1.05251e-07                  [m**2/s**2]
+Czdot_zdot                         2.73655e-07                   [m**2/s**2]
+
+Object                             Resident Space Object         
+Norad ID                           91883                         
+Covariance Method                  Calculated                    
+Maneuverable                       N/A                           
+Reference Frame                    ECI                           
+X                                  4201.56                       [km]
+Y                                  -41953.5                      [km]
+Z                                  0.864285                      [km]
+X_dot                              3.06055                       [km/s]
+Y_dot                              0.307192                      [km/s]
+Z_dot                              0.492716                      [km/s]
+Cx_x                               9593.44                       [m**2]
+Cy_x                               4460.57                       [m**2]
+Cy_y                               2096.49                       [m**2]
+Cz_x                               1696.69                       [m**2]
+Cz_y                               794.392                       [m**2]
+Cz_z                               376.426                       [m**2]
+Cxdot_x                            0.125837                      [m**2/s]
+Cxdot_y                            0.0602201                     [m**2/s]
+Cxdot_z                            0.0229755                     [m**2/s]
+Cxdot_xdot                         1.7706e-06                    [m**2/s**2]
+Cydot_x                            0.830653                      [m**2/s]
+Cydot_y                            0.386467                      [m**2/s]
+Cydot_z                            0.148013                      [m**2/s]
+Cydot_xdot                         1.09022e-05                   [m**2/s**2]
+Cydot_ydot                         7.19939e-05                   [m**2/s**2]
+Czdot_x                            0.0384637                     [m**2/s]
+Czdot_y                            0.0180167                     [m**2/s]
+Czdot_z                            0.00380807                    [m**2/s]
+Czdot_xdot                         4.98796e-07                   [m**2/s**2]
+Czdot_ydot                         3.28964e-06                   [m**2/s**2]
+Czdot_zdot                         2.83206e-07                   [m**2/s**2]

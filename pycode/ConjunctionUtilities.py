@@ -666,9 +666,11 @@ def compute_euclidean_distance(r_A, r_B):
     return d
 
 
-def montecarlo_Pc_final(r_A, r_B, P_A, P_B, HBR):
+def montecarlo_Pc_final(r_A, r_B, P_A, P_B, HBR, N=None):
     # Generate samples at initial time
-    N = 10000
+    if N is None:
+        N = 10000
+
     samples_A = np.random.default_rng().multivariate_normal(r_A.flatten(), P_A, N).T
     samples_B = np.random.default_rng().multivariate_normal(r_B.flatten(), P_B, N).T
 
@@ -684,13 +686,14 @@ def montecarlo_Pc_final(r_A, r_B, P_A, P_B, HBR):
             total += 1.
             if d <= HBR:
                 hits += 1.
-
+        if(not ii % 10000):
+            print("MC Iteration n. ", int(ii/1000), 'k')
     Pc = hits / total
 
     return Pc
 
 
-def montecarlo_Pc_combined(r_A, r_B, P_A, P_B, HBR):
+def montecarlo_Pc_combined(r_A, r_B, P_A, P_B, HBR, N=None):
     # Location of combined hardbody (center of object not at origin)
     r_HB = r_A
 
@@ -698,7 +701,9 @@ def montecarlo_Pc_combined(r_A, r_B, P_A, P_B, HBR):
     P = P_A + P_B
 
     # Draw samples from combined distribution
-    N = 50000000
+    if N is None:
+        N = 50000000
+
     mean = np.array([0., 0., 0.])
     samples = np.random.default_rng().multivariate_normal(mean, P, N).T
 
