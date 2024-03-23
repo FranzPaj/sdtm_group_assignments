@@ -1,6 +1,7 @@
 import numpy as np
 import os
 import inspect
+import pickle
 
 from tudatpy import constants
 import pycode.ConjunctionUtilities as util
@@ -44,28 +45,28 @@ print(np.rad2deg(my_sat.keplerian_state[1]))
 print('Initial list:', len(obj_dict.keys()), 'objects')
 
 # Perigee-apogee filter
-distance_pa = 10 * 10 ** 3  # Acceptable perigee-apogee distance - m
+distance_pa = 20 * 10 ** 3  # Acceptable perigee-apogee distance - m
 obj_dict = util.perigee_apogee_filter(my_sat, obj_dict, distance_pa)
 # 17 remaining
 print('Perigee-apogee filter:', len(obj_dict.keys()), 'remaining')
 
 # Geometrical filter
-distance_geom = 10 * 10 ** 3  # Acceptable Euclidean distance - m
+distance_geom = 20 * 10 ** 3  # Acceptable Euclidean distance - m
 obj_dict_, rel_distances_geom = util.geometrical_filter(my_sat, obj_dict,
                                                         distance_geom)  # rel_distances_geom for debugginf purposes
 # 17 remaining
 print('Geometrical filter:', len(obj_dict.keys()), 'remaining')
 
 # Time filter
-distance_time = 10 * 10 ** 3
+distance_time = 20 * 10 ** 3
 obj_dict_2 = obj_dict.copy()
 obj_dict_2 = util.time_filter(my_sat, obj_dict, tspan, distance_time)
 print('Temporal filter:', len(obj_dict.keys()), 'remaining')
 
-# # print(len(obj_dict.keys()))
-# for norad_id in obj_dict.keys():
-#     obj = obj_dict[norad_id]
-#     print('Object perigee [km]:',obj.rp / 1000, '| Object apogee [km]:', obj.ra / 1000)
+# print(len(obj_dict.keys()))
+for norad_id in obj_dict.keys():
+    obj = obj_dict[norad_id]
+    print('Object perigee [km]:',obj.rp / 1000, '| Object apogee [km]:', obj.ra / 1000)
 
 
 ####################################
@@ -76,7 +77,7 @@ print('-------------------------------')
 print('TCA Assessment')
 print('-------------------------------')
 
-distance_tca = 10 * 10 ** 3  # Critical distance to identify TCAs
+distance_tca = 20 * 10 ** 3  # Critical distance to identify TCAs
 delete_ls = []
 
 for norad_id in obj_dict.keys():
@@ -188,17 +189,17 @@ for norad_id in obj_dict.keys():
         tvec_sat = np.array([my_sat.epoch, obj.tca_T_list[i]])
         tf_sat, Xf_sat, Pf_matrix_sat = propagate_state_and_covar(Xo_sat, Po_sat, tvec_sat, sat_params, int_params)
 
-        if prop['tf'].size == 0:
+        if len(prop['tf']) == 0:
             prop['tf'] = tf_sat
         else:
             prop['tf'] = [prop['tf'], tf_sat]
 
-        if prop['Xf'].size == 0:
+        if len(prop['Xf']) == 0:
             prop['Xf'] = Xf_sat
         else:
             prop['Xf'] = np.column_stack((prop['Xf'], Xf_sat))
 
-        if prop['Pf'].size == 0:
+        if len(prop['Pf']) == 0:
             prop['Pf'] = Pf_matrix_sat
         else:
             prop['Pf'] = np.column_stack((prop['Pf'], Pf_matrix_sat))
@@ -238,6 +239,41 @@ for norad_id in obj_dict.keys():
     print('Foster Probability of collision:\t ', Pc)
     print('-------------------------------')
 pass
+
+
+########################################
+######## Data for NASA MonteCarlo ######
+########################################
+
+montecarlo_data_dir = os.path.join(current_dir, 'CARA_matlab','MonteCarloPc','data_files')
+obj_filename = os.path.join(montecarlo_data_dir, 'obj_dict_test.txt')
+
+matlab_data = np.zeros((len(obj_dict.keys()), 88))
+i = 0
+# Change into comprehensible format for matlab:
+for norad_id in obj_dict.keys():
+
+    obj = obj_dict[norad_id]
+    matlab_data[i,0] = norad_id
+    matlab_data[i,1] = obj.area
+    matlab_data[i,2:8] = obj.Xf[:,0]
+    matlab_data[i,8:44] = obj.Pf.flatten()
+
+    norad_id_str = str(norad_id)
+    Xf_sat = getattr(my_sat, norad_id_str)['Xf']
+    Pf_sat = getattr(my_sat, norad_id_str)['Pf']
+    matlab_data[i,44] = my_sat.NORAD_ID
+    matlab_data[i,45] = my_sat.area
+    matlab_data[i,46:52] = Xf_sat[:,0]
+    matlab_data[i,52:88] = Pf_sat.flatten()
+
+    i += 1
+
+np.savetxt(obj_filename,matlab_data)
+
+
+
+
 ########################################
 ######## Manoeuvre assessment ##########
 ########################################
