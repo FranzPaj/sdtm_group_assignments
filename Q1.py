@@ -68,8 +68,7 @@ print('Temporal filter:', len(obj_dict.keys()), 'remaining')
 # print(len(obj_dict.keys()))
 for norad_id in obj_dict.keys():
     obj = obj_dict[norad_id]
-    print('Object perigee [km]:',obj.rp / 1000, '| Object apogee [km]:', obj.ra / 1000)
-
+    print('Object perigee [km]:', obj.rp / 1000, '| Object apogee [km]:', obj.ra / 1000)
 
 ####################################
 ########## TCA Assessment ##########
@@ -145,9 +144,8 @@ for norad_id in delete_ls:
 print('TCA cutoff:', len(obj_dict.keys()), 'remaining')
 
 ######################################
-######## Propagation to TCA ##########
+######## Finding best TCA  ###########
 ######################################
-
 bodies_to_create = ['Sun', 'Earth', 'Moon']
 
 sat_params = {}
@@ -162,6 +160,82 @@ sat_params['bodies_to_create'] = bodies_to_create
 Xo_sat = my_sat.cartesian_state
 Po_sat = my_sat.covar
 
+int_params_propagation_to_epoch = {'tudat_integrator': 'rk4', 'step': 10}
+
+int_params_precise_analysis_forward = {'tudat_integrator': 'rkf78', 'step': 0.01, 'max_step': 0.05, 'min_step': 1e-4,
+                                       'rtol': 1e-12, 'atol': 1e-12}
+
+int_params_precise_analysis_backwards = {'tudat_integrator': 'rkf78', 'step': -0.01, 'max_step': -0.05,
+                                         'min_step': -1e-4, 'rtol': 1e-12, 'atol': 1e-12}
+
+for norad_id in obj_dict.keys():
+    obj = obj_dict[norad_id]
+    Xo = obj.cartesian_state
+    rso_params = {'mass': obj.mass, 'area': obj.area, 'Cd': obj.Cd, 'Cr': obj.Cr, 'sph_deg': 8,
+                  'sph_ord': 8, 'central_bodies': ['Earth'], 'bodies_to_create': bodies_to_create}
+
+    print('RSO :', norad_id)
+    print('Propagation around estimated TCA to find better approximation')
+    # First propagation to final epoch
+    tvec = np.array([obj.epoch, obj.tca_T_list[0]])
+    t_rso, X_rso_prop = propagate_orbit(Xo, tvec, rso_params, int_params_propagation_to_epoch)
+    print('RSO normal prop done')
+    t_sat, X_sat_prop = propagate_orbit(Xo_sat, tvec, sat_params, int_params_propagation_to_epoch)
+    print('SAT normal prop done')
+
+    # Propagation around epoch
+    end_time = obj.tca_T_list[0] - 20
+    tvec_backwards = np.array([obj.tca_T_list[0], end_time])
+    t_rso_back, X_rso_back = propagate_orbit(X_rso_prop[-1, :], tvec_backwards, rso_params,
+                                             int_params_precise_analysis_backwards)
+    print('RSO backwards prop done')
+    t_sat_back, X_sat_back = propagate_orbit(X_sat_prop[-1, :], tvec_backwards, sat_params,
+                                             int_params_precise_analysis_backwards)
+    print('SAT backwards prop done')
+    tvec_forward = np.array([obj.tca_T_list[0], obj.tca_T_list[0] + 20])
+    t_rso_for, X_rso_for = propagate_orbit(X_rso_prop[-1, :], tvec_forward, rso_params,
+                                           int_params_precise_analysis_forward)
+    print('RSO forward prop done')
+    t_sat_for, X_sat_for = propagate_orbit(X_sat_prop[-1, :], tvec_forward, sat_params,
+                                           int_params_precise_analysis_forward)
+    print('SAT backwards prop done')
+
+    check = False
+    tca_real = obj.tca_T_list[0]
+    min_dist = obj.tca_rho_list[0]
+    for i in range(len(t_rso_back)):
+        dist = np.linalg.norm(X_rso_back[i, 0:3] - X_sat_back[i, 0:3])
+        if dist < min_dist:
+            check = True
+            min_dist = dist
+            tca_real = t_rso_back[i]
+
+    for i in range(len(t_rso_for)):
+        dist = np.linalg.norm(X_rso_for[i, 0:3] - X_sat_for[i, 0:3])
+        if dist < min_dist:
+            check = True
+            min_dist = dist
+            tca_real = t_rso_for[i]
+
+    if check is True:
+        print('Final closest distance: ', min_dist, '\n')
+        print('Epoch: ', tca_real, '\n')
+        print('Difference from Denenberg method:\n'
+              'Dist difference: ', min_dist - obj.tca_rho_list[0], '\n'
+              'Time diff: ', tca_real - obj.tca_T_list[0])
+    else:
+        print('Final closest distance and TCA coincident with Denenberg method\n'
+              'Min distance: ', min_dist, '\n'
+              'TCA: ', obj.tca_T_list[0])
+    print('-------------------------------\n')
+    obj.tca_T_list[0] = tca_real
+    obj.tca_rho_list[0] = min_dist
+
+
+
+######################################
+######## Propagation to TCA ##########
+######################################
 # intergator parameters
 int_params = {'tudat_integrator': 'rkf78', 'step': 10., 'max_step': 1000., 'min_step': 1e-3, 'rtol': 1e-12,
               'atol': 1e-12}
@@ -177,16 +251,16 @@ for norad_id in obj_dict.keys():
 
     tf = np.zeros(len(obj.tca_T_list))
     Xf = np.zeros(shape=(6, len(obj.tca_T_list)))
-    Pf = np.zeros(shape=(6, 6*len(obj.tca_T_list)))
+    Pf = np.zeros(shape=(6, 6 * len(obj.tca_T_list)))
 
     prop = {'tf': np.array([]), 'Xf': np.array([]), 'Pf': np.array([])}
 
     for i in range(len(obj.tca_T_list)):
         tvec = np.array([obj.epoch, obj.tca_T_list[i]])
         tf[i], Xf_new, Pf_matrix = propagate_state_and_covar(Xo, Po, tvec, rso_params, int_params)
-        Xf[:, i] = Xf_new.reshape((6, ))
-        inx = 6*i
-        Pf[:, inx:(inx+6)] = Pf_matrix
+        Xf[:, i] = Xf_new.reshape((6,))
+        inx = 6 * i
+        Pf[:, inx:(inx + 6)] = Pf_matrix
 
         tvec_sat = np.array([my_sat.epoch, obj.tca_T_list[i]])
         tf_sat, Xf_sat, Pf_matrix_sat = propagate_state_and_covar(Xo_sat, Po_sat, tvec_sat, sat_params, int_params)
@@ -232,7 +306,7 @@ for norad_id in obj_dict.keys():
     Xf_rso = obj.Xf
     Pf_rso = obj.Pf
 
-    HBR = np.sqrt(my_sat.area/np.pi) + np.sqrt(obj.area/np.pi)
+    HBR = np.sqrt(my_sat.area / np.pi) + np.sqrt(obj.area / np.pi)
     Pc = util.Pc2D_Foster(Xf_sat, Pf_sat, Xf_rso, Pf_rso, HBR, rtol=1e-8, HBR_type='circle')
 
     M = util.compute_mahalanobis_distance(Xf_sat[0:3], Xf_rso[0:3], Pf_sat[0:3, 0:3], Pf_rso[0:3, 0:3])
@@ -277,29 +351,27 @@ for norad_id in obj_dict.keys():
 ######## Data for NASA MonteCarlo ######
 ########################################
 
-montecarlo_data_dir = os.path.join(current_dir, 'CARA_matlab','MonteCarloPc','data_files')
+montecarlo_data_dir = os.path.join(current_dir, 'CARA_matlab', 'MonteCarloPc', 'data_files')
 obj_filename = os.path.join(montecarlo_data_dir, 'obj_dict_test.txt')
 
 matlab_data = np.zeros((len(obj_dict.keys()), 88))
 i = 0
 # Change into comprehensible format for matlab:
 for norad_id in obj_dict.keys():
-
     obj = obj_dict[norad_id]
-    matlab_data[i,0] = norad_id
-    matlab_data[i,1] = obj.area
-    matlab_data[i,2:8] = obj.Xf[:,0]
-    matlab_data[i,8:44] = obj.Pf.flatten()
+    matlab_data[i, 0] = norad_id
+    matlab_data[i, 1] = obj.area
+    matlab_data[i, 2:8] = obj.Xf[:, 0]
+    matlab_data[i, 8:44] = obj.Pf.flatten()
 
     norad_id_str = str(norad_id)
     Xf_sat = getattr(my_sat, norad_id_str)['Xf']
     Pf_sat = getattr(my_sat, norad_id_str)['Pf']
-    matlab_data[i,44] = my_sat.NORAD_ID
-    matlab_data[i,45] = my_sat.area
-    matlab_data[i,46:52] = Xf_sat[:,0]
-    matlab_data[i,52:88] = Pf_sat.flatten()
+    matlab_data[i, 44] = my_sat.NORAD_ID
+    matlab_data[i, 45] = my_sat.area
+    matlab_data[i, 46:52] = Xf_sat[:, 0]
+    matlab_data[i, 52:88] = Pf_sat.flatten()
 
     i += 1
 
-np.savetxt(obj_filename,matlab_data)
-
+np.savetxt(obj_filename, matlab_data)
