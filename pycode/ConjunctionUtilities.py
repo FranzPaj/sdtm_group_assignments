@@ -241,7 +241,7 @@ def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclid
         if sin_Delta_s < 0:
             Delta_s = - Delta_s
         
-        print(np.cos(Delta_p), 1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) - np.sin(incl_s) * np.cos(incl_p) * np.cos(raan_p - raan_s)))
+        # print(np.cos(Delta_p), 1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) - np.sin(incl_s) * np.cos(incl_p) * np.cos(raan_p - raan_s)))
         # SHOULD BE SAME!!!
 
         # Search for point 1 and 2 - initial search values
