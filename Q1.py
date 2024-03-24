@@ -160,7 +160,7 @@ sat_params['bodies_to_create'] = bodies_to_create
 Xo_sat = my_sat.cartesian_state
 Po_sat = my_sat.covar
 
-int_params_propagation_to_epoch = {'tudat_integrator': 'rk4', 'step': 10}
+int_params_propagation_to_epoch = {'tudat_integrator': 'rk4', 'step': 1}
 
 int_params_precise_analysis_forward = {'tudat_integrator': 'rkf78', 'step': 0.01, 'max_step': 0.05, 'min_step': 1e-4,
                                        'rtol': 1e-12, 'atol': 1e-12}
@@ -339,7 +339,6 @@ for norad_id in obj_dict.keys():
     print('Relative Velocity in ECI:\n', rel_vel)
     print('Relative Velocity in RSW:\n', rel_vel_ric)
 
-    # write_cdm(epoch, tca, d_euc, speed, rel_pos_ric, Pc, norad_rso, x_sat, x_rso, P_sat, P_rso)
     filename = write_cdm(obj.utc, obj.tca_T_list[0], d, M, np.linalg.norm(rel_vel), rel_pos_ric,
                          Pc, norad_id, Xf_sat, Xf_rso, Pf_sat, Pf_rso)
 
