@@ -1,7 +1,7 @@
+clear all, close all, clc
+
 addpath ../Pc2D_Foster
 addpath(genpath('../Utils'))
-
-
 
 Accuracy        = 0.1; % Desired MC Accuracy (0.01=1%)
 MC_Confidence   = 0.95; % Desired Monte Carlo Confidence Level
@@ -16,9 +16,6 @@ num_obj = size(M,1);
 %%
 
 for i = 1:num_obj
-    
-    disp('-------------------------------------------')
-    disp(join(['RSO: ',noradid2]))
 
     noradid1 = int2str(int32(M(i,45)));
     A1 = M(i,46);
@@ -37,6 +34,9 @@ for i = 1:num_obj
     radius2 = sqrt(A2 / pi);
     
     HBR = radius1 + radius2;
+
+    disp('-------------------------------------------')
+    disp(join(['RSO: ',noradid2]))
     
     
     % Save data and plots in right folders
