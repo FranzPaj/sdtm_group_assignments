@@ -1,7 +1,7 @@
 from tudatpy.astro.time_conversion import julian_day_to_calendar_date
 from tudatpy import constants
 
-def write_cdm(epoch, tca, d_euc, speed, rel_pos_ric, Pc, norad_rso, X_sat, X_rso, P_sat, P_rso):
+def write_cdm(epoch, tca, d_euc, d_mahal, speed, rel_pos_ric, Pc, norad_rso, X_sat, X_rso, P_sat, P_rso):
     """
     Writes CDM
     :param P_rso: RSO covariance matrix 6x6
@@ -13,6 +13,7 @@ def write_cdm(epoch, tca, d_euc, speed, rel_pos_ric, Pc, norad_rso, X_sat, X_rso
     :param rel_pos_ric: Relative position in RIC reference frame
     :param speed: Relative speed
     :param d_euc: Euclidean distance at TCA
+    :param d_mahal: Mahalanobis distance at TCA
     :param tca: TCA
     :param epoch: Date of creation file (equivalent to RSO epoch)
     :return: filename
@@ -56,7 +57,8 @@ def write_cdm(epoch, tca, d_euc, speed, rel_pos_ric, Pc, norad_rso, X_sat, X_rso
         {"Column1": "Relative Position I", "Column2": i, "Column3": '[m]'},
         {"Column1": "Relative Position C", "Column2": c, "Column3": '[m]'},
         {"Column1": "Collision Probability", "Column2": Pc, "Column3": ''},
-        {"Column1": "Collision Probability method", "Column2": 'Foster', "Column3": ''}
+        {"Column1": "Collision Probability method", "Column2": 'Foster', "Column3": ''},
+        {"Column1": "Mahalanobis Distance", "Column2": d_mahal, "Column3": ''}
     ]
     norad_sat = 40920
     metadata_sat = [

@@ -10,6 +10,7 @@ Relative Position I                1.29125                       [m]
 Relative Position C                0.00532488                    [m]
 Collision Probability              0.000845296                   
 Collision Probability method       Foster                        
+Mahalanobis Distance               0.0919239                     
 
 OBJECTS DATA
 Object                             Satellite                     
