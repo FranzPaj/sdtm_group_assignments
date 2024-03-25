@@ -69,28 +69,23 @@ def analysis(truth_state, state, meas,
         [(filter_output[t])['covar'].reshape(1, 36) for t in time])
     state = np.vstack(
         [(filter_output[t])['state'].reshape(1, 6) for t in time])
-    # dummy = len((filter_output[time[0]])['resids'])
-    # resids = np.vstack(
-    #     [(filter_output[t])['resids'].reshape(1, dummy) for t in time])
-    state_ric_pos = np.zeros((len(time), 3))
-    # state_ric_vel = np.zeros((len(time), 3))
+    dummy = len((filter_output[time[0]])['resids'])
+    resid = np.vstack(
+        [(filter_output[t])['resids'].reshape(1, dummy) for t in time])
 
-    truth_state_ric_pos = np.zeros((len(time), 3))
-    # truth_state_ric_vel = np.zeros((len(time), 3))
+    error_ric = np.zeros((len(time), 3))
+
+    error = truth_state - state
 
     cov_pos_ric = np.zeros((len(time), 9))
-    # cov_vel_ric = np.zeros((len(time), 9))
 
     for i in range(len(time)):
         # int state
-        state_ric_pos[i, :] = util.eci2ric(
-            state[i, 0:3], state[i, 3:6], state[i, :3]).reshape(1, 3)
+        error_ric[i, :] = util.eci2ric(
+            state[i, 0:3], state[i, 3:6], error[i, :3]).reshape(1, 3)
         # state_ric_vel[i, :] = util.eci2ric(
         #     state[i, 0:3], state[i, 3:6], state[i, 3:6]).reshape(1, 3)
         # true state
-        truth_state_ric_pos[i, :] = util.eci2ric(
-            truth_state[i, 0:3], truth_state[i, 3:6],
-            truth_state[i, :3]).reshape(1, 3)
         # truth_state_ric_vel[i, :] = util.eci2ric(
         #     truth_state[i, 0:3], truth_state[i, 3:6],
         #     truth_state[i, 3:6]).reshape(1, 3)
@@ -105,7 +100,6 @@ def analysis(truth_state, state, meas,
     sigma_bound_pos = 3 * np.sqrt(cov_pos_ric)
     # sigma_bound_vel = 3 * np.sqrt(np.sum(np.diag(cov_vel_ric)))
     # residuals
-    resid = truth_state - state
     # RMS_pos_ = np.sqrt(np.sum(resids[:, 0:3] ** 2) / len(time))
     # RMS_vel_ = np.sqrt(np.sum(resids[:, 3:6] ** 2) / len(time))
     # print(RMS_pos_)
@@ -122,15 +116,15 @@ def analysis(truth_state, state, meas,
         # plotting 1
         time_rel = (time - time[0]) / 3600
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
-        ax1.plot(time_rel, resid[:, 0])
+        ax1.plot(time_rel, error_ric[:, 0])
         ax1.plot(time_rel, sigma_bound_pos[:, 0], 'k:')
         ax1.plot(time_rel, -sigma_bound_pos[:, 0], 'k:')
         ax1.grid()
-        ax2.plot(time_rel, resid[:, 1])
+        ax2.plot(time_rel, error_ric[:, 1])
         ax2.plot(time_rel, sigma_bound_pos[:, 4], 'k:')
         ax2.plot(time_rel, -sigma_bound_pos[:, 4], 'k:')
         ax2.grid()
-        ax3.plot(time_rel, resid[:, 2])
+        ax3.plot(time_rel, error_ric[:, 2])
         ax3.plot(time_rel, sigma_bound_pos[:, 8], 'k:')
         ax3.plot(time_rel, -sigma_bound_pos[:, 8], 'k:')
         ax3.grid()
@@ -141,59 +135,59 @@ def analysis(truth_state, state, meas,
               (ax9, ax10, ax11, ax12)) = plt.subplots(
             3, 4, figsize=(12, 8))
         # R direction
-        ax1.plot(time_rel[:31], resid[:31, 0])
+        ax1.plot(time_rel[:31], error_ric[:31, 0])
         ax1.plot(time_rel[:31], sigma_bound_pos[:31, 0], 'k:')
         ax1.plot(time_rel[:31], -sigma_bound_pos[:31, 0], 'k:')
         ax1.grid()
         ax1.set_ylabel('R-direction error [m]')
-        ax2.plot(time_rel[31:62], resid[31:62, 0])
+        ax2.plot(time_rel[31:62], error_ric[31:62, 0])
         ax2.plot(time_rel[31:62], sigma_bound_pos[31:62, 0], 'k:')
         ax2.plot(time_rel[31:62], -sigma_bound_pos[31:62, 0], 'k:')
         ax2.grid()
-        ax3.plot(time_rel[62:93], resid[62:93, 0])
+        ax3.plot(time_rel[62:93], error_ric[62:93, 0])
         ax3.plot(time_rel[62:93], sigma_bound_pos[62:93, 0], 'k:')
         ax3.plot(time_rel[62:93], -sigma_bound_pos[62:93, 0], 'k:')
         ax3.grid()
-        ax4.plot(time_rel[93:], resid[93:, 0])
+        ax4.plot(time_rel[93:], error_ric[93:, 0])
         ax4.plot(time_rel[93:], sigma_bound_pos[93:, 0], 'k:')
         ax4.plot(time_rel[93:], -sigma_bound_pos[93:, 0], 'k:')
         ax4.grid()
         # I direction
-        ax5.plot(time_rel[:31], resid[:31, 1])
+        ax5.plot(time_rel[:31], error_ric[:31, 1])
         ax5.set_ylabel('I-direction error [m]')
         ax5.plot(time_rel[:31], sigma_bound_pos[:31, 4], 'k:')
         ax5.plot(time_rel[:31], -sigma_bound_pos[:31, 4], 'k:')
         ax5.grid()
-        ax6.plot(time_rel[31:62], resid[31:62, 1])
+        ax6.plot(time_rel[31:62], error_ric[31:62, 1])
         ax6.plot(time_rel[31:62], sigma_bound_pos[31:62, 4], 'k:')
         ax6.plot(time_rel[31:62], -sigma_bound_pos[31:62, 4], 'k:')
         ax6.grid()
-        ax7.plot(time_rel[62:93], resid[62:93, 1])
+        ax7.plot(time_rel[62:93], error_ric[62:93, 1])
         ax7.plot(time_rel[62:93], sigma_bound_pos[62:93, 4], 'k:')
         ax7.plot(time_rel[62:93], -sigma_bound_pos[62:93, 4], 'k:')
         ax7.grid()
-        ax8.plot(time_rel[93:], resid[93:, 1])
+        ax8.plot(time_rel[93:], error_ric[93:, 1])
         ax8.plot(time_rel[93:], sigma_bound_pos[93:, 4], 'k:')
         ax8.plot(time_rel[93:], -sigma_bound_pos[93:, 4], 'k:')
         ax8.grid()
         # C direction
-        ax9.plot(time_rel[:31], resid[:31, 2])
+        ax9.plot(time_rel[:31], error_ric[:31, 2])
         ax9.plot(time_rel[:31], sigma_bound_pos[:31, 8], 'k:')
         ax9.plot(time_rel[:31], -sigma_bound_pos[:31, 8], 'k:')
         ax9.set_ylabel('C-direction error [m]')
         ax9.set_xlabel('Time [hours]')
         ax9.grid()
-        ax10.plot(time_rel[31:62], resid[31:62, 2])
+        ax10.plot(time_rel[31:62], error_ric[31:62, 2])
         ax10.plot(time_rel[31:62], sigma_bound_pos[31:62, 8], 'k:')
         ax10.plot(time_rel[31:62], -sigma_bound_pos[31:62, 8], 'k:')
         ax10.set_xlabel('Time [hours]')
         ax10.grid()
-        ax11.plot(time_rel[62:93], resid[62:93, 2])
+        ax11.plot(time_rel[62:93], error_ric[62:93, 2])
         ax11.plot(time_rel[62:93], sigma_bound_pos[62:93, 8], 'k:')
         ax11.plot(time_rel[62:93], -sigma_bound_pos[62:93, 8], 'k:')
         ax11.set_xlabel('Time [hours]')
         ax11.grid()
-        ax12.plot(time_rel[93:], resid[93:, 2])
+        ax12.plot(time_rel[93:], error_ric[93:, 2])
         ax12.plot(time_rel[93:], sigma_bound_pos[93:, 8], 'k:')
         ax12.plot(time_rel[93:], -sigma_bound_pos[93:, 8], 'k:')
         ax12.set_xlabel('Time [hours]')
@@ -202,8 +196,6 @@ def analysis(truth_state, state, meas,
         plt.savefig('plots/' + name + '_error_sparse.png')
 
         if mtype == 'rad':
-            meas_val = np.asarray(meas['Yk_list']).reshape(124, 3)
-            resid = (state_ric_pos - meas_val)
 
             fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8),
                 (ax9, ax10, ax11, ax12)) = plt.subplots(
@@ -246,59 +238,37 @@ def analysis(truth_state, state, meas,
             plt.savefig('plots/' + name + '_residuals.png')
 
         elif mtype == 'opt':
-            ra, dec = xyz_to_radec_rad(state_ric_pos, time_rel*3600)
-            meas_val = np.asarray(meas['Yk_list'])
-            resid_ra = np.mod(
-                np.abs(ra - meas_val[:, 0]), 2*np.pi) * rad2arcsec
-            resid_dec = np.mod(
-                np.abs(dec - meas_val[:, 1]), 2*np.pi) * rad2arcsec
+
             fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8)) = plt.subplots(
                 2, 4, figsize=(16, 10))
             # R direction
-            ax1.scatter(time_rel[:31], resid_ra[:31, 0])
+            ax1.scatter(time_rel[:31], resid[:31, 0])
             ax1.set_ylabel('RA residuals (arcsec)')
             ax1.grid()
-            ax2.scatter(time_rel[31:62], resid_ra[31:62, 0])
+            ax2.scatter(time_rel[31:62], resid[31:62, 0])
             ax2.grid()
-            ax3.scatter(time_rel[62:93], resid_ra[62:93, 0])
+            ax3.scatter(time_rel[62:93], resid[62:93, 0])
             ax3.grid()
-            ax4.scatter(time_rel[93:], resid_ra[93:, 0])
+            ax4.scatter(time_rel[93:], resid[93:, 0])
             ax4.grid()
             # I direction
-            ax5.scatter(time_rel[:31], resid_dec[:31, 1])
+            ax5.scatter(time_rel[:31], resid[:31, 1])
             ax5.set_ylabel('DEC residuals (arcsec)')
             ax5.set_xlabel('Time [hours]')
             ax5.grid()
-            ax6.scatter(time_rel[31:62], resid_dec[31:62, 1])
+            ax6.scatter(time_rel[31:62], resid[31:62, 1])
             ax6.set_xlabel('Time [hours]')
             ax6.grid()
-            ax7.scatter(time_rel[62:93], resid_dec[62:93, 1])
+            ax7.scatter(time_rel[62:93], resid[62:93, 1])
             ax7.set_xlabel('Time [hours]')
             ax7.grid()
-            ax8.scatter(time_rel[93:], resid_dec[93:, 1])
+            ax8.scatter(time_rel[93:], resid[93:, 1])
             ax8.set_xlabel('Time [hours]')
             ax8.grid()
             plt.tight_layout()
             plt.savefig('plots/' + name + '_residuals.png')
 
     return RMS_pos, RMS_vel
-
-
-def xyz_to_radec_rad(pos, time):
-    # Calculate the Declination in radians
-    x = pos[:, 0]
-    y = pos[:, 1]
-    z = pos[:, 2]
-    dec = np.arcsin(z / np.sqrt(x ** 2 + y ** 2 + z ** 2))
-    # Calculate the Right Ascension in radians
-    theta0 = 0.
-    dtheta = 7.2921158553e-5
-    # RA is the arctan of Y divided by X
-    ra = np.arctan2(y, x) - np.arange(len(time))*10*dtheta
-
-    # Ensure RA is between 0 and 2π
-
-    return ra, dec
 
 
 # Radar A
