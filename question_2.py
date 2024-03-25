@@ -83,29 +83,15 @@ def analysis(truth_state, state, meas,
         # int state
         error_ric[i, :] = util.eci2ric(
             state[i, 0:3], state[i, 3:6], error[i, :3]).reshape(1, 3)
-        # state_ric_vel[i, :] = util.eci2ric(
-        #     state[i, 0:3], state[i, 3:6], state[i, 3:6]).reshape(1, 3)
-        # true state
-        # truth_state_ric_vel[i, :] = util.eci2ric(
-        #     truth_state[i, 0:3], truth_state[i, 3:6],
-        #     truth_state[i, 3:6]).reshape(1, 3)
-        # covariance
         cov = covars[i, :].reshape(6, 6)
         cov_pos_ric[i, :] = (util.eci2ric(
             state[i, 0:3], state[i, 3:6], cov[:3, :3])).reshape(1, 9)
-        # cov_vel_ric[i, :] = (util.eci2ric(
-        #     state[:, 0:3], state[:, 3:6], cov[3:6, 3:6])).reshape(1, 9)
 
     # sigma bound
     sigma_bound_pos = 3 * np.sqrt(cov_pos_ric)
-    # sigma_bound_vel = 3 * np.sqrt(np.sum(np.diag(cov_vel_ric)))
-    # residuals
-    # RMS_pos_ = np.sqrt(np.sum(resids[:, 0:3] ** 2) / len(time))
-    # RMS_vel_ = np.sqrt(np.sum(resids[:, 3:6] ** 2) / len(time))
-    # print(RMS_pos_)
-    # print(RMS_vel_)
-    RMS_pos = np.sqrt(np.sum(resid[:, 0:3]**2)/len(time))
-    RMS_vel = np.sqrt(np.sum(resid[:, 3:6]**2)/len(time))
+
+    RMS_pos = np.sqrt(np.sum(error[:, 0:3]**2)/len(time))
+    RMS_vel = np.sqrt(np.sum(error[:, 3:6]**2)/len(time))
 
     if plotting:
         plt.rc('axes', titlesize=16)  # fontsize of the axes title
@@ -238,31 +224,31 @@ def analysis(truth_state, state, meas,
             plt.savefig('plots/' + name + '_residuals.png')
 
         elif mtype == 'opt':
-
+            rad2arcsec = 3600. * 180. / np.pi
             fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8)) = plt.subplots(
                 2, 4, figsize=(16, 10))
             # R direction
-            ax1.scatter(time_rel[:31], resid[:31, 0])
+            ax1.scatter(time_rel[:31], resid[:31, 0] * rad2arcsec )
             ax1.set_ylabel('RA residuals (arcsec)')
             ax1.grid()
-            ax2.scatter(time_rel[31:62], resid[31:62, 0])
+            ax2.scatter(time_rel[31:62], resid[31:62, 0] * rad2arcsec)
             ax2.grid()
-            ax3.scatter(time_rel[62:93], resid[62:93, 0])
+            ax3.scatter(time_rel[62:93], resid[62:93, 0] * rad2arcsec)
             ax3.grid()
-            ax4.scatter(time_rel[93:], resid[93:, 0])
+            ax4.scatter(time_rel[93:], resid[93:, 0] * rad2arcsec)
             ax4.grid()
             # I direction
-            ax5.scatter(time_rel[:31], resid[:31, 1])
+            ax5.scatter(time_rel[:31], resid[:31, 1] * rad2arcsec)
             ax5.set_ylabel('DEC residuals (arcsec)')
             ax5.set_xlabel('Time [hours]')
             ax5.grid()
-            ax6.scatter(time_rel[31:62], resid[31:62, 1])
+            ax6.scatter(time_rel[31:62], resid[31:62, 1] * rad2arcsec)
             ax6.set_xlabel('Time [hours]')
             ax6.grid()
-            ax7.scatter(time_rel[62:93], resid[62:93, 1])
+            ax7.scatter(time_rel[62:93], resid[62:93, 1] * rad2arcsec)
             ax7.set_xlabel('Time [hours]')
             ax7.grid()
-            ax8.scatter(time_rel[93:], resid[93:, 1])
+            ax8.scatter(time_rel[93:], resid[93:, 1] * rad2arcsec)
             ax8.set_xlabel('Time [hours]')
             ax8.grid()
             plt.tight_layout()
@@ -349,6 +335,43 @@ rms_rad_pos_b = np.zeros((n, 1))
 rms_rad_vel_b = np.zeros((n, 1))
 rms_opt_pos_b = np.zeros((n, 1))
 rms_opt_vel_b = np.zeros((n, 1))
+
+
+def analysis2(truth_state, state, meas,
+             sensor, integ, filters, time):
+    rad2arcsec = 1 / ((1. / 3600.) * np.pi / 180.)
+    filter_output = util.ukf(state, meas, sensor,
+                             integ, filters, None)
+    # extract covars and state
+    covars = np.vstack(
+        [(filter_output[t])['covar'].reshape(1, 36) for t in time])
+    state = np.vstack(
+        [(filter_output[t])['state'].reshape(1, 6) for t in time])
+    dummy = len((filter_output[time[0]])['resids'])
+    resid = np.vstack(
+        [(filter_output[t])['resids'].reshape(1, dummy) for t in time])
+
+    error_ric = np.zeros((len(time), 3))
+
+    error = truth_state - state
+
+    cov_pos_ric = np.zeros((len(time), 9))
+
+    for i in range(len(time)):
+        # int state
+        error_ric[i, :] = util.eci2ric(
+            state[i, 0:3], state[i, 3:6], error[i, :3]).reshape(1, 3)
+        cov = covars[i, :].reshape(6, 6)
+        cov_pos_ric[i, :] = (util.eci2ric(
+            state[i, 0:3], state[i, 3:6], cov[:3, :3])).reshape(1, 9)
+
+    # sigma bound
+    sigma_bound_pos = 3 * np.sqrt(cov_pos_ric)
+
+    RMS_pos = np.sqrt(np.sum(error[:, 0:3] ** 2) / len(time))
+    RMS_vel = np.sqrt(np.sum(error[:, 3:6] ** 2) / len(time))
+
+    return RMS_pos, RMS_vel
 # for i in range(n):
 #     Qeci = Q[i] * np.diag([1., 1., 1.])
 #     Qric = 0 * np.diag([1., 1., 1.])
@@ -360,35 +383,35 @@ rms_opt_vel_b = np.zeros((n, 1))
 #         'gap_seconds': gap_seconds
 #     }
 #     # Radar A
-#     rms_rad_pos_a[i], rms_rad_vel_a[i] = analysis(
+#     rms_rad_pos_a[i], rms_rad_vel_a[i] = analysis2(
 #         state_truth_a, state_rad_a, meas_rad_a, sensor_params_rad_a,
-#         int_params, filter_params, t_rad_a, 'radar_a', 'rad', 0)
-#     rms_opt_pos_a[i], rms_opt_vel_a[i] = analysis(
+#         int_params, filter_params, t_rad_a)
+#     rms_opt_pos_a[i], rms_opt_vel_a[i] = analysis2(
 #         state_truth_a, state_opt_a, meas_opt_a, sensor_params_opt_a,
-#         int_params, filter_params, t_opt_a, 'optical_a', 'opt', 0)
-#     rms_rad_pos_b[i], rms_rad_vel_b[i] = analysis(
+#         int_params, filter_params, t_opt_a)
+#     rms_rad_pos_b[i], rms_rad_vel_b[i] = analysis2(
 #         state_truth_b, state_rad_b, meas_rad_b, sensor_params_rad_b,
-#         int_params, filter_params, t_rad_b, 'radar_b', 'rad', 0)
-#     rms_opt_pos_b[i], rms_opt_vel_b[i] = analysis(
+#         int_params, filter_params, t_rad_b)
+#     rms_opt_pos_b[i], rms_opt_vel_b[i] = analysis2(
 #         state_truth_b, state_opt_b, meas_opt_b, sensor_params_opt_b,
-#         int_params, filter_params, t_opt_b, 'optical_b', 'opt', 0)
+#         int_params, filter_params, t_opt_b)
 #
-#     fig, (ax1, ax2) = plt.subplots(2, 1)
-#     ax1.loglog(Q, rms_rad_pos_a)
-#     ax1.loglog(Q, rms_opt_pos_a)
-#     ax1.loglog(Q, rms_rad_pos_b)
-#     ax1.loglog(Q, rms_opt_pos_b)
-#     ax1.set_xlabel('Qeci component [m^2/s^4]')
-#     ax1.set_ylabel('3D position RMS [m]')
-#     ax1.legend(['Radar A', 'Optical A', 'Radar B', 'Optical B'])
+# fig, (ax1, ax2) = plt.subplots(2, 1)
+# ax1.loglog(Q, rms_rad_pos_a)
+# ax1.loglog(Q, rms_opt_pos_a)
+# ax1.loglog(Q, rms_rad_pos_b)
+# ax1.loglog(Q, rms_opt_pos_b)
+# ax1.set_xlabel('Qeci component [m^2/s^4]')
+# ax1.set_ylabel('3D position RMS [m]')
+# ax1.legend(['Radar A', 'Optical A', 'Radar B', 'Optical B'])
 #
-#     ax2.loglog(Q, rms_rad_vel_a)
-#     ax2.loglog(Q, rms_opt_vel_a)
-#     ax2.loglog(Q, rms_rad_vel_b)
-#     ax2.loglog(Q, rms_opt_vel_b)
-#     ax2.set_xlabel('Qeci component [m^2/s^4]')
-#     ax2.set_ylabel('3D velocity RMS [m/s]')
-#     ax2.legend(['Radar A', 'Optical A', 'Radar B', 'Optical B'])
+# ax2.loglog(Q, rms_rad_vel_a)
+# ax2.loglog(Q, rms_opt_vel_a)
+# ax2.loglog(Q, rms_rad_vel_b)
+# ax2.loglog(Q, rms_opt_vel_b)
+# ax2.set_xlabel('Qeci component [m^2/s^4]')
+# ax2.set_ylabel('3D velocity RMS [m/s]')
+# ax2.legend(['Radar A', 'Optical A', 'Radar B', 'Optical B'])
 #
-#     plt.tight_layout()
-#     plt.savefig('plots/state_noise_compensation.png')
+# plt.tight_layout()
+# plt.savefig('plots/state_noise_compensation.png')
