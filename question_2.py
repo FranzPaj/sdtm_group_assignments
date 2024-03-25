@@ -61,7 +61,7 @@ int_params = {'tudat_integrator': 'rkf78',
 
 def analysis(truth_state, state, meas,
              sensor, integ, filters, time, name: str, mtype, plotting):
-    arcsec2rad = (1. / 3600.) * np.pi / 180.
+    rad2arcsec = 1 / ((1. / 3600.) * np.pi / 180.)
     filter_output = util.ukf(state, meas, sensor,
                              integ, filters, None)
     # extract covars and state
@@ -204,6 +204,7 @@ def analysis(truth_state, state, meas,
         if mtype == 'rad':
             meas_val = np.asarray(meas['Yk_list']).reshape(124, 3)
             resid = (state_ric_pos - meas_val)
+
             fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8),
                 (ax9, ax10, ax11, ax12)) = plt.subplots(
                 3, 4, figsize=(12, 8))
@@ -247,8 +248,10 @@ def analysis(truth_state, state, meas,
         elif mtype == 'opt':
             ra, dec = xyz_to_radec_rad(state_ric_pos, time_rel*3600)
             meas_val = np.asarray(meas['Yk_list'])
-            resid_ra = np.abs(ra - meas_val[:, 0]) * arcsec2rad
-            resid_dec = np.abs(dec - meas_val[:, 1]) * arcsec2rad
+            resid_ra = np.mod(
+                np.abs(ra - meas_val[:, 0]), 2*np.pi) * rad2arcsec
+            resid_dec = np.mod(
+                np.abs(dec - meas_val[:, 1]), 2*np.pi) * rad2arcsec
             fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8)) = plt.subplots(
                 2, 4, figsize=(16, 10))
             # R direction
@@ -294,9 +297,6 @@ def xyz_to_radec_rad(pos, time):
     ra = np.arctan2(y, x) - np.arange(len(time))*10*dtheta
 
     # Ensure RA is between 0 and 2π
-    for i in range(len(x)):
-        if ra[i] < 0:
-            ra[i] += 2 * math.pi
 
     return ra, dec
 
