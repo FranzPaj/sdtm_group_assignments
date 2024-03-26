@@ -184,7 +184,7 @@ for norad_id in obj_dict.keys():
     print('SAT normal prop done')
 
     # Propagation around epoch
-    end_time = obj.tca_T_list[0] - 20
+    end_time = obj.tca_T_list[0] - 10
     tvec_backwards = np.array([obj.tca_T_list[0], end_time])
     t_rso_back, X_rso_back = propagate_orbit(X_rso_prop[-1, :], tvec_backwards, rso_params,
                                              int_params_precise_analysis_backwards)
@@ -192,7 +192,7 @@ for norad_id in obj_dict.keys():
     t_sat_back, X_sat_back = propagate_orbit(X_sat_prop[-1, :], tvec_backwards, sat_params,
                                              int_params_precise_analysis_backwards)
     print('SAT backwards prop done')
-    tvec_forward = np.array([obj.tca_T_list[0], obj.tca_T_list[0] + 20])
+    tvec_forward = np.array([obj.tca_T_list[0], obj.tca_T_list[0] + 10])
     t_rso_for, X_rso_for = propagate_orbit(X_rso_prop[-1, :], tvec_forward, rso_params,
                                            int_params_precise_analysis_forward)
     print('RSO forward prop done')
