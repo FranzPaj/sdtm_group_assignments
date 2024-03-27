@@ -10,15 +10,15 @@ from datetime import datetime
 ###############################################################################
 
 # File name should include group number
-json_file = 'group7_sensor_tasking_file.json'
+json_file = 'group2_sensor_tasking_file.json'
 
 # Sensor type is a string, either 'radar' or 'optical'
-sensor_type = 'radar'
-#sensor_type = 'optical'
+# sensor_type = 'radar'
+sensor_type = 'optical'
 
 # Sensor location
-latitude_radians = np.deg2rad(10.)
-longitude_radians = np.deg2rad(20.)
+latitude_radians = np.deg2rad(-12.432778)
+longitude_radians = np.deg2rad(132.951944)
 height_meters = 30.
 
 # Indicate start times and object IDs for each task.
@@ -34,44 +34,44 @@ height_meters = 30.
 # Round times to nearest second
 
 # Task 1
-task1_start_UTC = datetime(2000, 1, 1, 12, 0, 0)
-task1_object_id = 10001
+task1_start_UTC = datetime(2024, 3, 21, 12, 0, 0)
+task1_object_id = 91509
 
 # Task 2
-task2_start_UTC = datetime(2000, 1, 2, 12, 0, 0)
-task2_object_id = 10002
+task2_start_UTC = datetime(2024, 3, 21, 12, 15, 0)
+task2_object_id = 91395
 
 # Task 3
-task3_start_UTC = datetime(2000, 1, 3, 12, 0, 0)
-task3_object_id = 10003
+task3_start_UTC = datetime(2024, 3, 21, 12, 30, 0)
+task3_object_id = 91686
 
 # Task 4
-task4_start_UTC = datetime(2000, 1, 4, 12, 0, 0)
-task4_object_id = 10004
+task4_start_UTC = datetime(2024, 3, 21, 12, 45, 0)
+task4_object_id = 91332
 
 # Task 5
-task5_start_UTC = datetime(2000, 1, 5, 12, 0, 0)
-task5_object_id = 10005
+task5_start_UTC = datetime(2024, 3, 21, 13, 0, 0)
+task5_object_id = 40940
 
 # Task 6
-task6_start_UTC = datetime(2000, 1, 6, 12, 0, 0)
-task6_object_id = 10006
+task6_start_UTC = datetime(2024, 3, 21, 13, 15, 0)
+task6_object_id = 91883
 
 # Task 7
-task7_start_UTC = datetime(2000, 1, 7, 12, 0, 0)
-task7_object_id = 10007
+task7_start_UTC = datetime(2024, 3, 22, 10, 15, 0)
+task7_object_id = 91509
 
 # Task 8
-task8_start_UTC = datetime(2000, 1, 8, 12, 0, 0)
-task8_object_id = 10008
+task8_start_UTC = datetime(2024, 3, 22, 10, 30, 0)
+task8_object_id = 91686
 
 # Task 9
-task9_start_UTC = datetime(2000, 1, 9, 12, 0, 0)
-task9_object_id = 10009
+task9_start_UTC = datetime(2024, 3, 22, 10, 45, 0)
+task9_object_id = 40940
 
 # Task 10
-task10_start_UTC = datetime(2000, 1, 10, 12, 0, 0)
-task10_object_id = 10010
+task10_start_UTC = datetime(2024, 3, 22, 11, 0, 0)
+task10_object_id = 91883
 
 
 
@@ -135,32 +135,3 @@ tasking_dict['10']['obj_id'] = task10_object_id
 
 with open(json_file, 'w') as f:
     json.dump(tasking_dict, f)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
