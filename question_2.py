@@ -125,7 +125,7 @@ def analysis(truth_state, state, meas,
         ax1.plot(time_rel[:31], sigma_bound_pos[:31, 0], 'k:')
         ax1.plot(time_rel[:31], -sigma_bound_pos[:31, 0], 'k:')
         ax1.grid()
-        ax1.set_ylabel('R-direction error [m]')
+        ax1.set_ylabel('R-direction [m]', size=16)
         ax2.plot(time_rel[31:62], error_ric[31:62, 0])
         ax2.plot(time_rel[31:62], sigma_bound_pos[31:62, 0], 'k:')
         ax2.plot(time_rel[31:62], -sigma_bound_pos[31:62, 0], 'k:')
@@ -140,7 +140,7 @@ def analysis(truth_state, state, meas,
         ax4.grid()
         # I direction
         ax5.plot(time_rel[:31], error_ric[:31, 1])
-        ax5.set_ylabel('I-direction error [m]')
+        ax5.set_ylabel('I-direction [m]', size=16)
         ax5.plot(time_rel[:31], sigma_bound_pos[:31, 4], 'k:')
         ax5.plot(time_rel[:31], -sigma_bound_pos[:31, 4], 'k:')
         ax5.grid()
@@ -160,23 +160,23 @@ def analysis(truth_state, state, meas,
         ax9.plot(time_rel[:31], error_ric[:31, 2])
         ax9.plot(time_rel[:31], sigma_bound_pos[:31, 8], 'k:')
         ax9.plot(time_rel[:31], -sigma_bound_pos[:31, 8], 'k:')
-        ax9.set_ylabel('C-direction error [m]')
-        ax9.set_xlabel('Time [hours]')
+        ax9.set_ylabel('C-direction [m]', size=16)
+        ax9.set_xlabel('Time [hours]', size=16)
         ax9.grid()
         ax10.plot(time_rel[31:62], error_ric[31:62, 2])
         ax10.plot(time_rel[31:62], sigma_bound_pos[31:62, 8], 'k:')
         ax10.plot(time_rel[31:62], -sigma_bound_pos[31:62, 8], 'k:')
-        ax10.set_xlabel('Time [hours]')
+        ax10.set_xlabel('Time [hours]', size=16)
         ax10.grid()
         ax11.plot(time_rel[62:93], error_ric[62:93, 2])
         ax11.plot(time_rel[62:93], sigma_bound_pos[62:93, 8], 'k:')
         ax11.plot(time_rel[62:93], -sigma_bound_pos[62:93, 8], 'k:')
-        ax11.set_xlabel('Time [hours]')
+        ax11.set_xlabel('Time [hours]', size=16)
         ax11.grid()
         ax12.plot(time_rel[93:], error_ric[93:, 2])
         ax12.plot(time_rel[93:], sigma_bound_pos[93:, 8], 'k:')
         ax12.plot(time_rel[93:], -sigma_bound_pos[93:, 8], 'k:')
-        ax12.set_xlabel('Time [hours]')
+        ax12.set_xlabel('Time [hours]', size=16)
         ax12.grid()
         plt.tight_layout()
         plt.savefig('plots/' + name + '_error_sparse.png')
@@ -189,7 +189,7 @@ def analysis(truth_state, state, meas,
             # R direction
             ax1.scatter(time_rel[:31], resid[:31, 0])
             ax1.grid()
-            ax1.set_ylabel('R-direction residual [m]')
+            ax1.set_ylabel('Range [m]', size=16)
             ax2.scatter(time_rel[31:62], resid[31:62, 0])
             ax2.grid()
             ax3.scatter(time_rel[62:93], resid[62:93, 0])
@@ -197,28 +197,28 @@ def analysis(truth_state, state, meas,
             ax4.scatter(time_rel[93:], resid[93:, 0])
             ax4.grid()
             # I direction
-            ax5.scatter(time_rel[:31], resid[:31, 1])
-            ax5.set_ylabel('I-direction residual [m]')
+            ax5.scatter(time_rel[:31], resid[:31, 1]*rad2arcsec)
+            ax5.set_ylabel('RA [arcsec]', size=16)
             ax5.grid()
-            ax6.scatter(time_rel[31:62], resid[31:62, 1])
+            ax6.scatter(time_rel[31:62], resid[31:62, 1]*rad2arcsec)
             ax6.grid()
-            ax7.scatter(time_rel[62:93], resid[62:93, 1])
+            ax7.scatter(time_rel[62:93], resid[62:93, 1]*rad2arcsec)
             ax7.grid()
-            ax8.scatter(time_rel[93:], resid[93:, 1])
+            ax8.scatter(time_rel[93:], resid[93:, 1]*rad2arcsec)
             ax8.grid()
             # C direction
-            ax9.scatter(time_rel[:31], resid[:31, 2])
-            ax9.set_ylabel('C-direction residual [m]')
-            ax9.set_xlabel('Time [hours]')
+            ax9.scatter(time_rel[:31], resid[:31, 2]*rad2arcsec)
+            ax9.set_ylabel('DEC [arcsec]', size=16)
+            ax9.set_xlabel('Time [hours]', size=16)
             ax9.grid()
-            ax10.scatter(time_rel[31:62], resid[31:62, 2])
-            ax10.set_xlabel('Time [hours]')
+            ax10.scatter(time_rel[31:62], resid[31:62, 2]*rad2arcsec)
+            ax10.set_xlabel('Time [hours]', size=16)
             ax10.grid()
-            ax11.scatter(time_rel[62:93], resid[62:93, 2])
-            ax11.set_xlabel('Time [hours]')
+            ax11.scatter(time_rel[62:93], resid[62:93, 2]*rad2arcsec)
+            ax11.set_xlabel('Time [hours]', size=16)
             ax11.grid()
-            ax12.scatter(time_rel[93:], resid[93:, 2])
-            ax12.set_xlabel('Time [hours]')
+            ax12.scatter(time_rel[93:], resid[93:, 2]*rad2arcsec)
+            ax12.set_xlabel('Time [hours]', size=16)
             ax12.grid()
             plt.tight_layout()
             plt.savefig('plots/' + name + '_residuals.png')
@@ -229,7 +229,7 @@ def analysis(truth_state, state, meas,
                 2, 4, figsize=(16, 10))
             # R direction
             ax1.scatter(time_rel[:31], resid[:31, 0] * rad2arcsec )
-            ax1.set_ylabel('RA residuals (arcsec)')
+            ax1.set_ylabel('RA (arcsec)', size=18)
             ax1.grid()
             ax2.scatter(time_rel[31:62], resid[31:62, 0] * rad2arcsec)
             ax2.grid()
@@ -239,17 +239,17 @@ def analysis(truth_state, state, meas,
             ax4.grid()
             # I direction
             ax5.scatter(time_rel[:31], resid[:31, 1] * rad2arcsec)
-            ax5.set_ylabel('DEC residuals (arcsec)')
-            ax5.set_xlabel('Time [hours]')
+            ax5.set_ylabel('DEC (arcsec)', size=18)
+            ax5.set_xlabel('Time [hours]', size=18)
             ax5.grid()
             ax6.scatter(time_rel[31:62], resid[31:62, 1] * rad2arcsec)
-            ax6.set_xlabel('Time [hours]')
+            ax6.set_xlabel('Time [hours]', size=16)
             ax6.grid()
             ax7.scatter(time_rel[62:93], resid[62:93, 1] * rad2arcsec)
-            ax7.set_xlabel('Time [hours]')
+            ax7.set_xlabel('Time [hours]', size=18)
             ax7.grid()
             ax8.scatter(time_rel[93:], resid[93:, 1] * rad2arcsec)
-            ax8.set_xlabel('Time [hours]')
+            ax8.set_xlabel('Time [hours]', size=18)
             ax8.grid()
             plt.tight_layout()
             plt.savefig('plots/' + name + '_residuals.png')
@@ -260,8 +260,8 @@ def analysis(truth_state, state, meas,
 # Radar A
 # Set process noise
 Qeci = 0 * np.diag([1., 1., 1.])
-Qric = 0 * np.diag([1., 1., 1.])
-alpha = 1e-1                            # to tune (in range [1e-4, 1])
+Qric = 8e-15 * np.diag([1., 1., 1.])
+alpha = 1e-4                            # to tune (in range [1e-4, 1])
 filter_params = {
     'Qeci': Qeci,
     'Qric': Qric,
@@ -273,11 +273,11 @@ rms_rad_pos_a, rms_rad_vel_a = analysis(
     int_params, filter_params, t_rad_a, 'radar_a', 'rad', 1)
 print(rms_rad_pos_a)
 print(rms_rad_vel_a)
-# Optical A
+# # Optical A
 # Set process noise
 Qeci = 0 * np.diag([1., 1., 1.])
-Qric = 0 * np.diag([1., 1., 1.])
-alpha = 1e-1                            # to tune (in range [1e-4, 1])
+Qric = 5e-15 * np.diag([20., 1., 1.])
+alpha = 1e-3                            # to tune (in range [1e-4, 1])
 filter_params = {
     'Qeci': Qeci,
     'Qric': Qric,
@@ -293,8 +293,8 @@ print(rms_opt_vel_a)
 # Radar B
 # Set process noise
 Qeci = 0 * np.diag([1., 1., 1.])
-Qric = 1e-12 * np.diag([1., 1., 1.])
-alpha = 1e-1                            # to tune (in range [1e-4, 1])
+Qric = 8e-12 * np.diag([1., 1., 1.])
+alpha = 1e-4                            # to tune (in range [1e-4, 1])
 filter_params = {
     'Qeci': Qeci,
     'Qric': Qric,
@@ -309,7 +309,7 @@ print(rms_rad_vel_b)
 # Optical B
 # Set process noise
 Qeci = 0 * np.diag([1., 1., 1.])
-Qric = 1e-15 * np.diag([1., 1., 1.])
+Qric = 5e-14 * np.diag([1., 1., 1.])
 alpha = 1e-1                            # to tune (in range [1e-4, 1])
 filter_params = {
     'Qeci': Qeci,
