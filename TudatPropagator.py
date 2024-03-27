@@ -358,14 +358,14 @@ def propagate_state_and_covar(Xo, Po, tvec, state_params, int_params, bodies=Non
         bodies.create_empty_body(jj_str)
         bodies.get(jj_str).mass = mass
         bodies_to_propagate.append(jj_str)
-        
+
         if Cd > 0.:
             aero_coefficient_settings = environment_setup.aerodynamic_coefficients.constant(
                 area, [Cd, 0, 0]
             )
             environment_setup.add_aerodynamic_coefficient_interface(
                 bodies, jj_str, aero_coefficient_settings)
-            
+
         if Cr > 0.:
             # occulting_bodies = ['Earth']
             # radiation_pressure_settings = environment_setup.radiation_pressure.cannonball(
@@ -373,16 +373,16 @@ def propagate_state_and_covar(Xo, Po, tvec, state_params, int_params, bodies=Non
             # )
             # environment_setup.add_radiation_pressure_interface(
             #     bodies, jj_str, radiation_pressure_settings)
-            
+
             occulting_bodies_dict = dict()
             occulting_bodies_dict[ "Sun" ] = [ "Earth" ]
-            
+
             radiation_pressure_settings = environment_setup.radiation_pressure.cannonball_radiation_target(
                 area, Cr, occulting_bodies_dict )
-            
+
             environment_setup.add_radiation_pressure_target_model(
                 bodies, jj_str, radiation_pressure_settings)
-            
+
 
     acceleration_settings_setup = {}        
     if 'Earth' in bodies_to_create:
@@ -393,19 +393,19 @@ def propagate_state_and_covar(Xo, Po, tvec, state_params, int_params, bodies=Non
         else:
             acceleration_settings_setup['Earth'] = [propagation_setup.acceleration.spherical_harmonic_gravity(sph_deg, sph_ord)]
         
-        # Aerodynamic Drag
-        if Cd > 0.:                
-            acceleration_settings_setup['Earth'].append(propagation_setup.acceleration.aerodynamic())
+        # Aerodynamic Drag : EXCLUDED FOR QUESTION 2
+        # if Cd > 0.:
+        #     acceleration_settings_setup['Earth'].append(propagation_setup.acceleration.aerodynamic())
         
     if 'Sun' in bodies_to_create:
         
         # Gravity
         acceleration_settings_setup['Sun'] = [propagation_setup.acceleration.point_mass_gravity()]
         
-        # Solar Radiation Pressure
-        if Cr > 0.:                
-            #acceleration_settings_setup['Sun'].append(propagation_setup.acceleration.cannonball_radiation_pressure())
-            acceleration_settings_setup['Sun'].append(propagation_setup.acceleration.radiation_pressure())
+        # Solar Radiation Pressure : EXCLUDED FOR QUESTION 2
+        # if Cr > 0.:
+        #     #acceleration_settings_setup['Sun'].append(propagation_setup.acceleration.cannonball_radiation_pressure())
+        #     acceleration_settings_setup['Sun'].append(propagation_setup.acceleration.radiation_pressure())
     
     if 'Moon' in bodies_to_create:
         
@@ -475,9 +475,11 @@ def propagate_state_and_covar(Xo, Po, tvec, state_params, int_params, bodies=Non
     
     # Compute mean and covariance at final time using unscented transform
     chi = np.reshape(chi_v, (n, 2*n+1), order='F')
-    Xf = np.dot(chi, Wm.T)
-    Xf = np.reshape(Xf, (n, 1))
-    chi_diff = chi - np.dot(Xf, np.ones((1, (2*n+1))))
+    mean = np.dot(chi, Wm.T)
+    mean = np.reshape(mean, (n, 1))
+    chi_diff = chi - np.dot(mean, np.ones((1, (2 * n + 1))))
     Pf = np.dot(chi_diff, np.dot(diagWc, chi_diff.T))
-    
+
+    # Output single mean state not computed average of sigma points
+    Xf = chi_v[0:6].reshape(6, 1)
     return tf, Xf, Pf

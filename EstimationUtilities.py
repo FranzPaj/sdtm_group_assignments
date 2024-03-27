@@ -221,6 +221,7 @@ def ukf(state_params, meas_dict, sensor_params, int_params, filter_params, bodie
     # Loop over times
     Xk = Xo.copy()
     Pk = Po.copy()
+    print('-------------UKF started-------------')
     for kk in range(N):
     
         # Current and previous time
@@ -299,11 +300,11 @@ def ukf(state_params, meas_dict, sensor_params, int_params, filter_params, bodie
         # Post-fit residuals and updated state
         resids = Yk - ybar_post
         
-        print('')
-        print('kk', kk)
-        print('Yk', Yk)
-        print('ybar', ybar)     
-        print('resids', resids)
+        # print('')
+        # print('kk', kk)
+        # print('Yk', Yk)
+        # print('ybar', ybar)
+        # print('resids', resids)
         
         # Store output
         filter_output[tk] = {}
@@ -311,7 +312,7 @@ def ukf(state_params, meas_dict, sensor_params, int_params, filter_params, bodie
         filter_output[tk]['covar'] = P
         filter_output[tk]['resids'] = resids
 
-    
+    print('-------------UKF finished------------')
     return filter_output
 
 
