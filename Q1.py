@@ -47,20 +47,20 @@ print(np.rad2deg(my_sat.keplerian_state[1]))
 print('Initial list:', len(obj_dict.keys()), 'objects')
 
 # Perigee-apogee filter
-distance_pa = 20 * 10 ** 3  # Acceptable perigee-apogee distance - m
+distance_pa = 25 * 10 ** 3  # Acceptable perigee-apogee distance - m
 obj_dict = util.perigee_apogee_filter(my_sat, obj_dict, distance_pa)
 # 17 remaining
 print('Perigee-apogee filter:', len(obj_dict.keys()), 'remaining')
 
 # Geometrical filter
-distance_geom = 20 * 10 ** 3  # Acceptable Euclidean distance - m
+distance_geom = 25 * 10 ** 3  # Acceptable Euclidean distance - m
 obj_dict_, rel_distances_geom = util.geometrical_filter(my_sat, obj_dict,
                                                         distance_geom)  # rel_distances_geom for debugginf purposes
 # 17 remaining
 print('Geometrical filter:', len(obj_dict.keys()), 'remaining')
 
 # Time filter
-distance_time = 20 * 10 ** 3
+distance_time = 25 * 10 ** 3
 obj_dict_2 = obj_dict.copy()
 obj_dict_2 = util.time_filter(my_sat, obj_dict, tspan, distance_time)
 print('Temporal filter:', len(obj_dict.keys()), 'remaining')
