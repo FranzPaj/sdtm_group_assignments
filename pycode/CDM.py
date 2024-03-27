@@ -1,5 +1,6 @@
 from tudatpy.astro.time_conversion import julian_day_to_calendar_date
 from tudatpy import constants
+import pandas as pd
 
 def write_cdm(epoch, tca, d_euc, d_mahal, speed, rel_pos_ric, Pc, norad_rso, X_sat, X_rso, P_sat, P_rso):
     """
@@ -9,7 +10,7 @@ def write_cdm(epoch, tca, d_euc, d_mahal, speed, rel_pos_ric, Pc, norad_rso, X_s
     :param X_rso: RSO state vector 6x1
     :param X_sat: Satellite state vector 6x1
     :param norad_rso: Norad ID rso
-    :param Pc: Probability of collision
+    :param Pc: Foster Probability of collision
     :param rel_pos_ric: Relative position in RIC reference frame
     :param speed: Relative speed
     :param d_euc: Euclidean distance at TCA
@@ -28,6 +29,8 @@ def write_cdm(epoch, tca, d_euc, d_mahal, speed, rel_pos_ric, Pc, norad_rso, X_s
         - Miss distance (euclidean)
         - Relative Speed 
         - Relative position rsw
+        - Probability of impact and method
+        - Mahalanobis distance
     - METADATA
         - object ( OBJECT 1 or OBJECT 2)
         - NORAD id (called object designator)
@@ -49,17 +52,42 @@ def write_cdm(epoch, tca, d_euc, d_mahal, speed, rel_pos_ric, Pc, norad_rso, X_s
     r = rel_pos_ric[0][0]
     i = rel_pos_ric[1][0]
     c = rel_pos_ric[2][0]
-    relative = [
-        {"Column1": "TCA", "Column2": tca_date, "Column3": ""},
-        {"Column1": "Miss Distance", "Column2": d_euc, "Column3": '[m]'},
-        {"Column1": "Relative Speed", "Column2": speed, "Column3": '[m/s]'},
-        {"Column1": "Relative Position R", "Column2": r, "Column3": '[m]'},
-        {"Column1": "Relative Position I", "Column2": i, "Column3": '[m]'},
-        {"Column1": "Relative Position C", "Column2": c, "Column3": '[m]'},
-        {"Column1": "Collision Probability", "Column2": Pc, "Column3": ''},
-        {"Column1": "Collision Probability method", "Column2": 'Foster', "Column3": ''},
-        {"Column1": "Mahalanobis Distance", "Column2": d_mahal, "Column3": ''}
-    ]
+    direct = f'./CARA_matlab/MonteCarloPC/outputs/{norad_rso}'
+
+    if Pc > 1e-6:
+        # if Pc < 1e-6, CARA method does not calculate MC probability
+        file = pd.read_csv(f'{direct}/PC_foster.dat', header=None)
+        P_foster = file[0][0]
+        file = pd.read_csv(f'{direct}/PC_MonteCarlo.dat', header=None)
+        P_mc = file[0][0]
+
+        relative = [
+            {"Column1": "TCA", "Column2": tca_date, "Column3": ""},
+            {"Column1": "Miss Distance", "Column2": d_euc, "Column3": '[m]'},
+            {"Column1": "Relative Speed", "Column2": speed, "Column3": '[m/s]'},
+            {"Column1": "Relative Position R", "Column2": r, "Column3": '[m]'},
+            {"Column1": "Relative Position I", "Column2": i, "Column3": '[m]'},
+            {"Column1": "Relative Position C", "Column2": c, "Column3": '[m]'},
+            {"Column1": "Collision Probability", "Column2": P_foster, "Column3": ''},
+            {"Column1": "Collision Probability method", "Column2": 'Foster', "Column3": ''},
+            {"Column1": "Collision Probability", "Column2": P_mc, "Column3": ''},
+            {"Column1": "Collision Probability method", "Column2": 'Monte Carlo', "Column3": ''},
+            {"Column1": "Mahalanobis Distance", "Column2": d_mahal, "Column3": ''}
+        ]
+    else:
+        relative = [
+            {"Column1": "TCA", "Column2": tca_date, "Column3": ""},
+            {"Column1": "Miss Distance", "Column2": d_euc, "Column3": '[m]'},
+            {"Column1": "Relative Speed", "Column2": speed, "Column3": '[m/s]'},
+            {"Column1": "Relative Position R", "Column2": r, "Column3": '[m]'},
+            {"Column1": "Relative Position I", "Column2": i, "Column3": '[m]'},
+            {"Column1": "Relative Position C", "Column2": c, "Column3": '[m]'},
+            {"Column1": "Collision Probability", "Column2": Pc, "Column3": ''},
+            {"Column1": "Collision Probability method", "Column2": 'Foster', "Column3": ''},
+            {"Column1": "Mahalanobis Distance", "Column2": d_mahal, "Column3": ''}
+        ]
+
+
     norad_sat = 40920
     metadata_sat = [
         {"Column1": "Object", "Column2": 'Satellite', "Column3": ''},

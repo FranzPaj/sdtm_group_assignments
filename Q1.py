@@ -339,6 +339,7 @@ for norad_id in obj_dict.keys():
     print('Relative Velocity in ECI:\n', rel_vel)
     print('Relative Velocity in RSW:\n', rel_vel_ric)
 
+
     filename = write_cdm(obj.utc, obj.tca_T_list[0], d, M, np.linalg.norm(rel_vel), rel_pos_ric,
                          Pc, norad_id, Xf_sat, Xf_rso, Pf_sat, Pf_rso)
 

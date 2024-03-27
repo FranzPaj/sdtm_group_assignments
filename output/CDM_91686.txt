@@ -8,8 +8,10 @@ Relative Speed                     500                           [m/s]
 Relative Position R                -1.66145                      [m]
 Relative Position I                1.29125                       [m]
 Relative Position C                0.00532488                    [m]
-Collision Probability              0.000845296                   
+Collision Probability              0.00668592                    
 Collision Probability method       Foster                        
+Collision Probability              0.00555581                    
+Collision Probability method       Monte Carlo                   
 Mahalanobis Distance               0.0919239                     
 
 OBJECTS DATA
