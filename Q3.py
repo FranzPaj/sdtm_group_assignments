@@ -46,9 +46,9 @@ if __name__ == "__main__":
     int_params = {'tudat_integrator': 'rkf78', 'step': 10., 'max_step': 1000., 'min_step': 1e-3, 'rtol': 1e-12,
                   'atol': 1e-12}
 
-    plt.figure(figsize=(12, 8), dpi=200)
-    ax = plt.axes(projection=ccrs.PlateCarree())
-    ax.coastlines()
+    dic_lat = {}
+    dic_lon = {}
+
     for norad_id in norad_ids:
         print(f"RSO : {norad_id}")
         obj = rso_dict[norad_id]
@@ -72,6 +72,8 @@ if __name__ == "__main__":
         tout, xout, latitudes, longitudes, shadow = prop.propagate_orbit(X0, trange, state_params, int_params, latlon_flag=True)
         shadow_index = np.where(shadow < 1)[0]
         shadow_times = (tout[np.where(shadow < 1)] - t0)/3600
+        dic_lat[norad_id] = latitudes
+        dic_lon[norad_id] = longitudes
         try:
             tin_shadow = (tout[shadow_index[0] - 1] - t0) / 3600  # Last time in full sun before entering the shadow
             tout_shadow = (tout[shadow_index[-1] + 1] - t0) / 3600  # First time in full sun after leaving the shadow
@@ -85,10 +87,17 @@ if __name__ == "__main__":
         print(f"Shadow times: {shadow_times}")
         print("------------------------------")
 
+    plt.figure(figsize=(12, 8), dpi=200)
+    ax = plt.axes(projection=ccrs.PlateCarree())
+    ax.coastlines()
+
+    for norad_id in norad_ids:
+        longitudes = dic_lon[norad_id]
+        latitudes = dic_lat[norad_id]
         if norad_id == 40940:
-            ax.scatter(longitudes / np.pi * 180, latitudes / np.pi * 180, label=norad_id, marker='*', s=20)
+            ax.scatter(longitudes / np.pi * 180, latitudes / np.pi * 180, label=norad_id, marker='*', s=75)
         else:
-            ax.scatter(longitudes / np.pi * 180, latitudes / np.pi * 180, label=norad_id, marker='.', s=2)
+            ax.scatter(longitudes / np.pi * 180, latitudes / np.pi * 180, label=norad_id, marker='o', s=20)
 
         sin_rho = R / (R + h)
         DL_e = np.deg2rad(np.rad2deg(longitudes) - location_groundstation_lon)
@@ -116,11 +125,3 @@ if __name__ == "__main__":
     ax.gridlines(draw_labels=True)
     ax.legend()
     plt.show()
-
-
-
-
-
-
-
-
