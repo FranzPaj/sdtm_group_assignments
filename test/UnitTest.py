@@ -3,16 +3,24 @@ import os
 from datetime import datetime
 import time
 
-import EstimationUtilities as EstUtil
-import TudatPropagator as prop
-import ConjunctionUtilities as ConjUtil
+import pathlib
+import sys
+
+_parentdir = pathlib.Path(__file__).parent.parent.resolve()
+sys.path.insert(0, str(_parentdir))
+
+import pycode.EstimationUtilities as EstUtil
+import pycode.TudatPropagator_q1 as prop
+import pycode.ConjunctionUtilities as ConjUtil
+
+sys.path.remove(str(_parentdir))
 
 ###############################################################################
 # Basic I/O
 ###############################################################################
 
 # Set directory for assignment data
-assignment_data_directory = 'data/unit_test'
+assignment_data_directory = '../data/unit_test'
 
 # Load RSO catalog file
 rso_file = os.path.join(assignment_data_directory, 'estimated_rso_catalog.pkl')

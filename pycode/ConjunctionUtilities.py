@@ -39,7 +39,10 @@ from scipy.special import erfcinv
 import pickle
 import time
 
-import pycode.TudatPropagator as prop
+if __name__ == '__main__':
+    import TudatPropagator_q1 as prop
+else:
+    import pycode.TudatPropagator_q1 as prop
 
 ###############################################################################
 # Basic I/O

@@ -5,8 +5,15 @@ import pickle
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
 
-import Estimators
+import pathlib
+import sys
 
+_parentdir = pathlib.Path(__file__).parent.parent.resolve()
+sys.path.insert(0, str(_parentdir))
+
+from pycode import Estimators
+
+sys.path.remove(str(_parentdir))
 
 ###############################################################################
 # Test Case Setup and Execution - Orbit Model
