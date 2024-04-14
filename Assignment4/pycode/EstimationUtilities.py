@@ -225,7 +225,6 @@ def ukf(state_params, meas_dict, sensor_params, int_params, filter_params, bodie
     Pk = Po.copy()
     print('-------------UKF started-------------')
     for kk in range(N):
-    
         # Current and previous time
         if kk == 0:
             tk_prior = t0

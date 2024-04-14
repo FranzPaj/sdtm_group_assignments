@@ -240,7 +240,7 @@ def analysis(truth_state, state, meas,
             fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8)) = plt.subplots(
                 2, 4, figsize=(16, 10))
             # R direction
-            ax1.scatter(time_rel[:31], resid[:31, 0] * rad2arcsec )
+            ax1.scatter(time_rel[:31], resid[:31, 0] * rad2arcsec)
             ax1.set_ylabel('RA [arcsec]', size=18)
             ax1.grid()
             ax2.scatter(time_rel[31:62], resid[31:62, 0] * rad2arcsec)
