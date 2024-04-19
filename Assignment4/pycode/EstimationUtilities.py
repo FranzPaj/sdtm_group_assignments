@@ -223,7 +223,6 @@ def ukf(state_params, meas_dict, sensor_params, int_params, filter_params, bodie
     # Loop over times
     Xk = Xo.copy()
     Pk = Po.copy()
-    print('-------------UKF started-------------')
     for kk in range(N):
         # Current and previous time
         if kk == 0:
@@ -312,8 +311,7 @@ def ukf(state_params, meas_dict, sensor_params, int_params, filter_params, bodie
         filter_output[tk]['state'] = Xk
         filter_output[tk]['covar'] = P
         filter_output[tk]['resids'] = resids
-
-    print('-------------UKF finished------------')
+        
     return filter_output
 
 

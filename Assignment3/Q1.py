@@ -245,6 +245,7 @@ for norad_id in obj_dict.keys():
     obj = obj_dict[norad_id]
     Xo = obj.cartesian_state
     Po = obj.covar
+    print(np.shape(Xo))
 
     rso_params = {'mass': obj.mass, 'area': obj.area, 'Cd': obj.Cd, 'Cr': obj.Cr, 'sph_deg': 8,
                   'sph_ord': 8, 'central_bodies': ['Earth'], 'bodies_to_create': bodies_to_create}

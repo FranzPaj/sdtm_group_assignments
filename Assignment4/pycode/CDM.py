@@ -1,6 +1,14 @@
 from tudatpy.astro.time_conversion import julian_day_to_calendar_date
 from tudatpy import constants
 import pandas as pd
+import os
+import inspect
+
+# Define path to objects datafile
+current_dir = os.path.dirname(inspect.getfile(inspect.currentframe()))
+src_dir = os.path.dirname(current_dir)
+matlab_outputs_dir = os.path.join(src_dir, 'CARA_matlab', 'MonteCarloPc', 'outputs')
+output_dir = os.path.join(src_dir, 'output', 'CDM')
 
 def write_cdm(epoch, tca, d_euc, d_mahal, speed, rel_pos_ric, Pc, norad_rso, X_sat, X_rso, P_sat, P_rso):
     """
@@ -52,7 +60,7 @@ def write_cdm(epoch, tca, d_euc, d_mahal, speed, rel_pos_ric, Pc, norad_rso, X_s
     r = rel_pos_ric[0][0]
     i = rel_pos_ric[1][0]
     c = rel_pos_ric[2][0]
-    direct = f'./CARA_matlab/MonteCarloPc/outputs/{norad_rso}'
+    direct = os.path.join(matlab_outputs_dir, str(norad_rso))
 
     if Pc > 1e-6:
         # if Pc < 1e-6, CARA method does not calculate MC probability
@@ -175,10 +183,11 @@ def write_cdm(epoch, tca, d_euc, d_mahal, speed, rel_pos_ric, Pc, norad_rso, X_s
         {"Column1": "Czdot_ydot", "Column2": P_rso[5, 4], "Column3": '[m**2/s**2]'},
         {"Column1": "Czdot_zdot", "Column2": P_rso[5, 5], "Column3": '[m**2/s**2]'}
     ]
-    filename = f'./output/CDM_{norad_rso}.txt'
+    filename = f'CDM_{norad_rso}.txt'
+    file_path = os.path.join(output_dir, filename)
     max_col_width_1 = 35
     max_col_width_2 = 30
-    with open(filename, "w+") as file:
+    with open(file_path, "w+") as file:
 
         file.write('CONJUNCTION DATA MESSAGE\n')
 
@@ -208,4 +217,4 @@ def write_cdm(epoch, tca, d_euc, d_mahal, speed, rel_pos_ric, Pc, norad_rso, X_s
             col2 = f"{row['Column2']:.6g}" if isinstance(row['Column2'], float) else row['Column2']
             file.write(f"{row['Column1']:<{max_col_width_1}}{col2:<{max_col_width_2}}{row['Column3']}\n")
 
-    return filename
+    return file_path
