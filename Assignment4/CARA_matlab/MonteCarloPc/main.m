@@ -6,8 +6,8 @@ clear all, close all, clc
 addpath ../Pc2D_Foster
 addpath(genpath('../Utils'))
 
-Accuracy        = 0.15; % Desired MC Accuracy (0.01=1%)
-MC_Confidence   = 0.90; % Desired Monte Carlo Confidence Level
+Accuracy        = 0.20; % Desired MC Accuracy (0.01=1%)
+MC_Confidence   = 0.85; % Desired Monte Carlo Confidence Level
 GM              = 3.986004418e14;% Earth gravitational constant mu = GM (EGM-96) [m^3/s^2] 
 LowVelThreshold = 0.05; % 5% of Orbital Period
 expSolution     = 4.20E-01;
@@ -75,7 +75,7 @@ for i = 1:num_obj
     Pc2D = Pc2D_Foster(r1_J2K*1000,v1_J2K*1000,C1_J2K,r2_J2K*1000,v2_J2K*1000,C2_J2K,HBR,1e-8,'circle');
     
     % Save Foster value
-    disp(join(['Foster probability: ',Pc2D]))
+    disp(join(['Foster probability: ', num2str(Pc2D)]))
     filename = join([out_dir, '/Pc_foster.dat']);
     writematrix(Pc2D,filename)  
 
@@ -94,7 +94,7 @@ for i = 1:num_obj
     Nsample_kep = max(1e2,Nsample_kep);
     Nsample_kep = min(1e10,Nsample_kep);
     
-    disp(join(['Number of samples needed: ',Nsample_kep]))
+    disp(join(['Number of samples needed: ',num2str(Nsample_kep)]))
 
 
     % Determine Batch Size min 1000, max 5000

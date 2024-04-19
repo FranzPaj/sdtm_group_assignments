@@ -9,9 +9,11 @@ import pickle
 import matplotlib.pyplot as plt
 from copy import deepcopy
 from tudatpy.astro.time_conversion import date_time_from_epoch, datetime_to_python
+from tudatpy.astro.element_conversion import cartesian_to_keplerian
 
 from tudatpy import constants
 import pycode.ConjunctionUtilities as util
+from pycode.ConjunctionUtilities import mu_e
 import pycode.EstimationUtilities as estimation
 from pycode.TudatPropagator_q1 import *
 from pycode import plot_gen
@@ -92,6 +94,7 @@ for norad_id in obj_dict:
     state_params, meas_dict, sensor_params = estimation.read_measurement_file(
         os.path.join(current_dir, 'data', 'states_updated', 'q4_meas_rso_'+str(norad_id)+'.pkl'))
     
+    # Consider RSO which executed manoeuvre
     if norad_id == 91686:
         # Elaborate maneouvre estimation data
         filename = 'ukf_afterman.pkl'
@@ -153,6 +156,7 @@ for norad_id in obj_dict:
     rso.meas_covar = meas_covar
     rso.meas_initial_time = measurement_times[-1]
     rso.meas_trange = np.array([measurement_times[-1], tend])
+    print('Final measurement time:', (measurement_times[-1] - tepoch)/3600)
 
     # Housekeeping data
     print('Residuals RMS:')
@@ -160,6 +164,36 @@ for norad_id in obj_dict:
     print('- Declination: ', RMS_res[1], 'rad')
     print('-------------UKF finished------------')
     print()
+
+    # if norad_id == my_norad:
+    #     # print(my_sat.keplerian_state)
+    #     # print(cartesian_to_keplerian(my_sat.meas_initial_state, mu_e))
+    #     tvec = np.array([tepoch, rso.meas_initial_time])
+    #     Xo = my_sat.cartesian_state
+    #     # Define propagation parameters
+    #     bodies_to_create = ['Sun', 'Earth', 'Moon']
+    #     rso1_params = {}
+    #     rso1_params['mass'] = my_sat.mass
+    #     rso1_params['area'] = my_sat.area
+    #     rso1_params['Cd'] = my_sat.Cd
+    #     rso1_params['Cr'] = my_sat.Cr
+    #     rso1_params['sph_deg'] = 8
+    #     rso1_params['sph_ord'] = 8
+    #     rso1_params['central_bodies'] = ['Earth']
+    #     rso1_params['bodies_to_create'] = bodies_to_create
+    #     # Define integration parameters
+    #     int_params = {}
+    #     int_params['tudat_integrator'] = 'rkf78'
+    #     int_params['step'] = 10.
+    #     int_params['max_step'] = 1000.
+    #     int_params['min_step'] = 1e-3
+    #     int_params['rtol'] = 1e-12
+    #     int_params['atol'] = 1e-12
+    #     tf, Xf = propagate_orbit(Xo,tvec,rso1_params,int_params )
+    #     print(Xf[-1,:])
+    #     print(rso.meas_initial_state)
+
+        # fig = plot_gen.kep_plot(my_sat.keplerian_state - cartesian_to_keplerian(my_sat.meas_initial_state, mu_e))
 
     # print(norad_id, 'final measurement time:', (measurement_times[-1] - tepoch)/3600)
     # plt.scatter(measurement_times[boundary:],residuals[boundary:,0])
@@ -174,6 +208,8 @@ for norad_id in obj_dict:
 ######## Obtain states of my_sat at the end of measurements ########
 
 my_sat_dict = {}
+my_sat_dict['nominal'] = my_sat
+
 # Define propagation parameters
 bodies_to_create = ['Sun', 'Earth', 'Moon']
 rso1_params = {}
@@ -185,7 +221,6 @@ rso1_params['sph_deg'] = 8
 rso1_params['sph_ord'] = 8
 rso1_params['central_bodies'] = ['Earth']
 rso1_params['bodies_to_create'] = bodies_to_create
-X1 = my_sat.cartesian_state
 # Define integration parameters
 int_params = {}
 int_params['tudat_integrator'] = 'rkf78'
@@ -194,27 +229,63 @@ int_params['max_step'] = 1000.
 int_params['min_step'] = 1e-3
 int_params['rtol'] = 1e-12
 int_params['atol'] = 1e-12
-# Define initial state 
-Xo_sat = my_sat.cartesian_state
-Po_sat = my_sat.covar
-
 
 # Propagate my_sat to the last observation conducted for each rso
 for norad_id in obj_dict:
+
+    if norad_id == my_norad:
+        continue
+
     rso = obj_dict[norad_id]
-    new_initial_time = rso.meas_initial_time
-    # Define integration limits
-    tvec = np.array([tepoch, new_initial_time])
-    # Propagate
-    tf, Xf, Pf = propagate_state_and_covar(Xo_sat, Po_sat, tvec, rso1_params,
-                                              int_params)
-    my_sat_new = deepcopy(my_sat)
-    my_sat_new.cartesian_state = Xf
-    # Remediate covariance matrix so that it is positive semi-definite
-    Pf= util.remediate_covariance(Pf, 0)[0]
-    my_sat_new.covar = Pf 
-    my_sat_new.meas_tf = tf
-    my_sat_dict[norad_id] = my_sat_new
+
+    my_sat_meas_tf = my_sat.meas_initial_time
+    rso_meas_tf = rso.meas_initial_time
+
+    if my_sat_meas_tf > rso_meas_tf:
+        tvec = np.array([rso_meas_tf, my_sat_meas_tf])
+        print((tvec - tepoch)/3600)
+        rso2_params = {}
+        rso2_params['mass'] = rso.mass
+        rso2_params['area'] = rso.area
+        rso2_params['Cd'] = rso.Cd
+        rso2_params['Cr'] = rso.Cr
+        rso2_params['sph_deg'] = 8
+        rso2_params['sph_ord'] = 8
+        rso2_params['central_bodies'] = ['Earth']
+        rso2_params['bodies_to_create'] = bodies_to_create
+        Xo = rso.meas_initial_state
+        Po = rso.meas_covar
+        # Propagate
+        tf, Xf, Pf = propagate_state_and_covar(Xo, Po, tvec, rso2_params,
+                                                int_params)
+        rso.meas_initial_state = Xf
+        # Remediate covariance matrix so that it is positive semi-definite
+        Pf= util.remediate_covariance(Pf, 0)[0]
+        rso.meas_covar = Pf
+        rso.meas_initial_time = tf
+        rso.meas_trange = np.array([tf, tend])
+        my_sat_new = deepcopy(my_sat)
+        my_sat_new.cartesian_state = my_sat_new.meas_initial_state
+        my_sat_new.covar = util.remediate_covariance(my_sat_new.meas_covar, 0)[0]
+        my_sat_dict[norad_id] = deepcopy(my_sat_new)
+
+    elif rso_meas_tf > my_sat_meas_tf:
+        # Define integration limits
+        tvec = np.array([my_sat_meas_tf, rso_meas_tf])
+        print((tvec - tepoch)/3600)
+
+        Xo = my_sat.meas_initial_state
+        Po = my_sat.meas_covar
+        # Propagate
+        tf, Xf, Pf = propagate_state_and_covar(Xo, Po, tvec, rso1_params,
+                                                int_params)
+        my_sat_new = deepcopy(my_sat)
+        my_sat_new.cartesian_state = Xf
+        # Remediate covariance matrix so that it is positive semi-definite
+        Pf= util.remediate_covariance(Pf, 0)[0]
+        my_sat_new.covar = Pf 
+        # my_sat_new.meas_tf = 0
+        my_sat_dict[norad_id] = deepcopy(my_sat_new)
 
 obj_dict.pop(my_norad)  # COMMENTED ONLY FOR DEBUGGING!
 
@@ -274,6 +345,7 @@ for norad_id in obj_dict.keys():
     int_params['atol'] = 1e-12
     # Find TCA
     trange = obj.meas_trange
+    # print((trange-tepoch)/3600)
     T_list, rho_list = util.compute_TCA(
         X1, X2, trange, rso1_params, rso2_params,
         int_params, rho_min_crit=distance_tca)
@@ -419,6 +491,7 @@ for norad_id in obj_dict.keys():
     obj = obj_dict[norad_id]
     Xo = obj.meas_initial_state
     Po = obj.meas_covar
+    Po = util.remediate_covariance(Po, 0.00001)[0]
     # print(np.shape(Xo))
     rso_params = {'mass': obj.mass, 'area': obj.area, 'Cd': obj.Cd, 'Cr': obj.Cr, 'sph_deg': 8,
                   'sph_ord': 8, 'central_bodies': ['Earth'], 'bodies_to_create': bodies_to_create}
@@ -433,12 +506,14 @@ for norad_id in obj_dict.keys():
         print([obj.meas_initial_time, obj.tca_T_list[i]])
         tvec = np.array([obj.meas_initial_time, obj.tca_T_list[i]])
         tf[i], Xf_new, Pf_matrix = propagate_state_and_covar(Xo, Po, tvec, rso_params, int_params)
+        Pf_matrix = util.remediate_covariance(Pf_matrix, 0)[0]
         Xf[:, i] = Xf_new.reshape((6,))
         inx = 6 * i
         Pf[:, inx:(inx + 6)] = Pf_matrix
 
         tvec_sat = np.array([obj.meas_initial_time, obj.tca_T_list[i]])
         tf_sat, Xf_sat, Pf_matrix_sat = propagate_state_and_covar(Xo_sat, Po_sat, tvec_sat, sat_params, int_params)
+        Pf_matrix_sat = util.remediate_covariance(Pf_matrix_sat, 0)[0]
 
         if len(prop['tf']) == 0:
             prop['tf'] = tf_sat
