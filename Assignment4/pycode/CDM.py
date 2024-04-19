@@ -62,13 +62,24 @@ def write_cdm(epoch, tca, d_euc, d_mahal, speed, rel_pos_ric, Pc, norad_rso, X_s
     c = rel_pos_ric[2][0]
     direct = os.path.join(matlab_outputs_dir, str(norad_rso))
 
-    if Pc > 1e-6:
-        # if Pc < 1e-6, CARA method does not calculate MC probability
-        file = pd.read_csv(f'{direct}/Pc_foster.dat', header=None)
+    # if Pc > 1e-6:
+    # if Pc < 1e-6, CARA method does not calculate MC probability
+
+    # FInd better Foster estimate (if present)
+    foster_path = os.path.join(direct, 'Pc_foster.dat')
+    if os.path.isfile(foster_path):
+        file = pd.read_csv(foster_path, header=None)
+        print('yep, it works!')
         P_foster = file[0][0]
-        file = pd.read_csv(f'{direct}/Pc_MonteCarlo.dat', header=None)
+
+    mc_flag = False
+    mc_path = os.path.join(direct, 'Pc_MonteCarlo.dat')
+    if os.path.isfile(mc_path):
+        print('Yep, also MonteCarlo works!')
+        file = pd.read_csv(mc_path, header=None)
         P_mc = file[0][0]
 
+    if mc_flag:
         relative = [
             {"Column1": "TCA", "Column2": tca_date, "Column3": ""},
             {"Column1": "Miss Distance", "Column2": d_euc, "Column3": '[m]'},

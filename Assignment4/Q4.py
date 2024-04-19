@@ -35,8 +35,8 @@ num_objs = len(data_dict.keys())
 ### 91686 is the manoeuvre one!
 ### 99002 is the initial orbit determination
 ### 91762 is the object characterisation
-close_encounter_ls = [91509]
-# close_encounter_ls = [91332, 91395, 91509, 91686, 91883]
+# close_encounter_ls = [91509]
+close_encounter_ls = [91332, 91395, 91509, 91686, 91883]
 
 #### Is 99002 a new one? What is that? Check
 
@@ -520,7 +520,7 @@ for norad_id in obj_dict.keys():
     file_path = write_cdm(obj.utc, obj.tca_T_list[0], d, M, np.linalg.norm(rel_vel), rel_pos_ric,
                          Pc, norad_id, Xf_sat, Xf_rso, Pf_sat, Pf_rso)
 
-    print('CDM generated and saved in: ', file_path)
+    # print('CDM generated and saved in: ', file_path)
     print('\n-------------------------------')
     print('-------------------------------')
 
@@ -540,9 +540,9 @@ for norad_id in obj_dict.keys():
     matlab_data[i, 1] = obj.area
     matlab_data[i, 2:8] = obj.Xf[:, 0]
     matlab_data[i, 8:44] = obj.Pf.flatten()
+    norad_id_str = str(norad_id)
 
     my_sat = my_sat_dict[norad_id]
-    norad_id_str = str(norad_id)
     Xf_sat = getattr(my_sat, norad_id_str)['Xf']
     Pf_sat = getattr(my_sat, norad_id_str)['Pf']
     matlab_data[i, 44] = my_sat.NORAD_ID
