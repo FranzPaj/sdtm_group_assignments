@@ -78,7 +78,7 @@ def gooding_angles_only(L, t1, t2, t3, r_site, range1, range3):
     delta = 1e-5
     total_range1 = np.array([])
     total_range3 = np.array([])
-    while distance > 10 and it < 200000:
+    while distance > 5 and it < 300000:
         # partial derivatives as finite difference
         range1_new = range1 + delta
         range3_new = range3 + delta
@@ -352,7 +352,7 @@ def refine_solution(initial_state, epochs, r_site, L, sensor_params_opt, range1,
     sigma_angles = sensor_params_opt['sigma_dict']['dec']
     sigma_radial1 = np.std(range1_list)
 
-    n = 100000
+    n = 1000000
     perturbed_initial_state = np.column_stack((
         np.random.normal(loc=Yk[0][0], scale=sigma_angles, size=n),
         np.random.normal(loc=Yk[0][1], scale=sigma_angles, size=n),
@@ -364,7 +364,7 @@ def refine_solution(initial_state, epochs, r_site, L, sensor_params_opt, range1,
         line_1 = line_of_sight(perturbed_initial_state[i, 0], perturbed_initial_state[i, 1])
         vec_new = r_site[0, :] + perturbed_initial_state[i, 2] * line_1
         position_1_eci[i, :] = vec_new.reshape(3,)
-        if i % 5000 == 0:
+        if i % 10000 == 0:
             print('Iterations std deviation estimation completed: ', i)
     std_dev_eci_x, std_dev_eci_y, std_dev_eci_z = (np.std(position_1_eci[:, 0]), np.std(position_1_eci[:, 1]),
                                                    np.std(position_1_eci[:, 2]))
@@ -546,13 +546,78 @@ def plot_orbit(ephemeris_in, ephemeris_end, t1, t2, t3, r_site, L, range_in, ran
     plt.show()
 
 
+def plot_lambert_and_perturbed(lambert_arc, initial_state, t1, t2, t3):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Define Earth's radius (in m)
+    earth_radius = 6371
+
+    # Generate data for Earth's surface (a sphere)
+    phi, theta = np.mgrid[0.0:2.0 * np.pi:100j, 0.0:np.pi:50j]
+    x = earth_radius * np.sin(theta) * np.cos(phi)
+    y = earth_radius * np.sin(theta) * np.sin(phi)
+    z = earth_radius * np.cos(theta)
+
+    # Plot the surface
+    ax.plot_surface(x, y, z, color='b', alpha=0.2, rstride=1, cstride=1, linewidth=0, antialiased=False)
+
+    pos_arc = np.zeros((10000, 3))
+    t = np.linspace(t1, t3, 10000)
+    for i in range(10000):
+        pos_arc[i, :] = lambert_arc.cartesian_state(t[i])[:3]
+    ax.plot(pos_arc[:, 0]/1000, pos_arc[:, 1]/1000, pos_arc[:, 2]/1000, linestyle='dashed', color='k',
+            label='Lambert Arc')
+
+    bodies_to_create = ['Sun', 'Earth', 'Moon']
+
+    state_param = {'Cd': 1.2, 'Cr': 1.2, 'area': 1, 'mass': 10, 'sph_deg': 8, 'sph_ord': 8,
+                   'bodies_to_create': bodies_to_create, 'central_bodies': ['Earth']}
+    int_param = {'tudat_integrator': 'rk4', 'step': 50}
+
+    t_rso, X_rso_prop = propagate_orbit(initial_state, [t1, t3], state_param, int_param)
+    ax.plot(X_rso_prop[:, 0]/1000, X_rso_prop[:, 1]/1000, X_rso_prop[:, 2]/1000, color='k',
+            label='Perturbed Propagation')
+
+    ax.plot(X_rso_prop[0, 0]/1000, X_rso_prop[0, 1]/1000, X_rso_prop[0, 2]/1000, 'o', label='Initial position',
+            markersize=6)
+    ax.plot(X_rso_prop[-1, 0] / 1000, X_rso_prop[-1, 1] / 1000, X_rso_prop[-1, 2] / 1000, 'o', label='Final position',
+            markersize=6)
+    # Set plot display parameters
+    ax.set_xlim([-45000, 45000])
+    ax.set_ylim([-45000, 45000])
+    ax.set_zlim([-45000, 45000])
+    ax.set_xlabel('X (km)')
+    ax.set_ylabel('Y (km)')
+    ax.set_zlabel('Z (km)')
+    ax.set_title('lambert arc and perturbed solution')
+    ax.view_init(azim=-100)
+    ax.legend(loc='upper left', bbox_to_anchor=(0.95, 0.95))
+    # Customize the number of ticks on each axis
+    ax.xaxis.set_major_locator(LinearLocator(5))  # Set 5 evenly spaced ticks
+    ax.yaxis.set_major_locator(LinearLocator(5))  # Set 5 evenly spaced ticks
+    ax.zaxis.set_major_locator(LinearLocator(5))  # Set 5 evenly spaced ticks
+    # Show the plot
+    plt.tight_layout()
+    plt.savefig('./Q3_plots/lambert_perturbed.png')
+    plt.show()
+
+
 def save_as_rso_obj(epoch, state, std_pos, std_vel):
     tudat_time = time_conversion.date_time_from_epoch(epoch)
     microsec = (tudat_time.seconds - int(tudat_time.seconds))*1000000
     utc = datetime(year=tudat_time.year, month=tudat_time.month, day=tudat_time.day, hour=tudat_time.hour,
                             minute=tudat_time.minute, second=int(tudat_time.seconds), microsecond=int(microsec))
-    covar = np.diag(np.array([std_pos**2, std_vel**2]))
-    rso_dict = {'UTC': utc, 'state': state.reshape(6,1), 'covar': covar, 'mass': 10, 'area': 1, 'Cd': 1.2, 'Cr': 1.2}
+
+    covar = np.array([[std_pos[0]**2, 0, 0, 0, 0, 0],
+                     [0, std_pos[1]**2, 0, 0, 0, 0],
+                     [0, 0, std_pos[2]**2, 0, 0, 0],
+                     [0, 0, 0, std_vel[0]**2, 0, 0],
+                     [0, 0, 0, 0, std_vel[1]**2, 0],
+                     [0, 0, 0, 0, 0, std_vel[2]**2]])
+
+    # covar = np.diag(np.array([std_pos**2, std_vel**2]))
+    rso_dict = {'UTC': utc, 'state': state.reshape(6, 1), 'covar': covar, 'mass': 10, 'area': 1, 'Cd': 1.2, 'Cr': 1.2}
 
     rso = {98765: rso_dict}
 

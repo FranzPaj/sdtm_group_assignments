@@ -46,6 +46,8 @@ keplerian_elements = element_conversion.cartesian_to_keplerian(initial_state, mu
 keplerian_elements_refined = element_conversion.cartesian_to_keplerian(best_state, mu)
 std_dev_eci_vel = np.array([np.std(good_states[:, 3]), np.std(good_states[:, 4]), np.std(good_states[:, 5])])
 
+plot_lambert_and_perturbed(lambert_arc_ephemeris, best_state, epochs[0], epochs[1], epochs[2])
+
 print('######################################')
 print('Gooding method solution:')
 print('Epochs: ', epochs)
