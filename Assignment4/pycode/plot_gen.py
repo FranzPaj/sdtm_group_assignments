@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import numpy as np
 from tudatpy import constants
+import matplotlib.ticker as mtick
 
 if __name__ == '__main__':
     from EstimationUtilities import eci2ric
@@ -681,4 +682,253 @@ def covar_ric(rso) -> plt.figure:
     plt.tight_layout()
 
     return fig
+
+def position_distribution(rso):
+    """3D plotter for orbits to be used during debug. It receives an array of positions and
+    displays them in 3D space.
+
+    Arguments:
+        r: array of positions in km.
+    """
+
+    # Define the writing sizes
+    tick_fs = 12
+    label_fs = 14
+    title_fs = 16
+    legend_fs = label_fs
+
+    num_samples = 100
+
+    np.random.seed(1)
+    state_0 = rso.propagated_state
+    
+    covar_0 = rso.propagated_covar
+    
+    state_1 = rso.meas_initial_state
+    state_0 = state_0 - state_1
+    state_1 = state_1 - state_1
+    covar_1 = rso.meas_covar
+    r0 = np.random.multivariate_normal(state_0.flatten()[:3], covar_0[:3,:3], num_samples)
+    r1 = np.random.multivariate_normal(state_1.flatten()[:3], covar_1[:3,:3], num_samples)
+
+    vel = rso.meas_initial_state[3:6]
+    vel_norm = vel / np.linalg.norm(vel)
+    u = vel_norm[0]
+    v = vel_norm[1]
+    w = vel_norm[2]
+
+    # Definition
+    X0 = r0[:,0]
+    Y0 = r0[:,1]
+    Z0 = r0[:,2] 
+    X1 = r1[:,0]
+    Y1 = r1[:,1]
+    Z1 = r1[:,2] 
+
+    # Plot and show
+
+    fig = plt.figure(figsize=(5,4))
+    ax = fig.add_subplot(111, projection='3d', computed_zorder=False)    
+    param_dict_0 = {
+        'color':'blue',
+        'label':'without measurements'
+    }
+    param_dict_1 = {
+        'color':'red',
+        'label':'with measurements'
+    }
+    opts = {
+        'xlabel':r'x [m]',
+        'ylabel':r'y [m]',
+        'zlabel':r'z [m]',
+        'label_fontsize':label_fs,
+        'title_fontsize':title_fs,
+        'legend':True,
+        'grid':True,
+        'tick_fontsize':tick_fs,
+    }
+
+    ax.quiver(0, 0, 0, u, v, w, length=70,linewidths=3, label = 'velocity', color = 'saddlebrown',  zorder = 3)
+    ax.scatter(X0, Y0, Z0,**param_dict_0, alpha=0.35, zorder = 2)
+    ax.scatter(X1, Y1, Z1,**param_dict_1, zorder = 1)
+
+    # # Equalise axes
+    # xmin0 = np.min(X0)
+    # xmax0 = np.max(X0)
+    # xmin1 = np.min(X1)
+    # xmax1 = np.max(X1)
+    # xmin = min([xmin0, xmin1])
+    # xmax = max([xmax0, xmax1])
+
+    # ymin0 = np.min(Y0)
+    # ymax0 = np.max(Y0)
+    # ymin1 = np.min(Y1)
+    # ymax1 = np.max(Y1)
+    # ymin = min([ymin0, ymin1])
+    # ymax = max([ymax0, ymax1])
+
+    # zmin0 = np.min(X0)
+    # zmax0 = np.max(X0)
+    # zmin1 = np.min(X1)
+    # zmax1 = np.max(X1)
+    # xmin = min([xmin0, xmin1])
+    # xmax = max([xmax0, xmax1])
+
+    # max_range = np.array([X1.max()-X1.min(), Y1.max()-Y1.min(), Z1.max()-Z1.min()]).max() / 2.0
+    # mid_x = (X1.max()+X1.min()) * 0.5
+    # mid_y = (Y1.max()+Y1.min()) * 0.5
+    # mid_z = (Z1.max()+Z1.min()) * 0.5
+    # ax.set_xlim(mid_x - max_range, mid_x + max_range)
+    # ax.set_ylim(mid_y - max_range, mid_y + max_range)
+    # ax.set_zlim(mid_z - max_range, mid_z + max_range)
+
+    padding = 5
+    ax.xaxis.labelpad=padding
+    ax.yaxis.labelpad=padding
+    ax.zaxis.labelpad=padding
+
+    fig_formatter(ax,opts)
+    plt.tight_layout()
+
+    return fig
+
+def position_distribution_propagated(rso):
+    """3D plotter for orbits to be used during debug. It receives an array of positions and
+    displays them in 3D space.
+
+    Arguments:
+        r: array of positions in km.
+    """
+
+    # Define the writing sizes
+    tick_fs = 12
+    label_fs = 14
+    title_fs = 16
+    legend_fs = label_fs
+
+    num_samples = 1000
+
+    np.random.seed(1)
+    state_1 = rso.meas_initial_state
+    state_0 = rso.propagated_state
+    state_0 = state_0 - state_1
+    covar_0 = rso.propagated_covar
+    r0 = np.random.multivariate_normal(state_0.flatten()[:3], covar_0[:3,:3], num_samples)
+
+
+    # Definition
+    X0 = r0[:,0]
+    Y0 = r0[:,1]
+    Z0 = r0[:,2] 
+
+
+    # Plot and show
+
+    fig = plt.figure( figsize = (5,4), layout="constrained")
+    ax = fig.add_subplot(111, projection='3d')    
+    param_dict_0 = {
+        'color':'blue',
+        'label':'propagated$'
+    }
+    opts = {
+        'xlabel':r'x [m]',
+        'ylabel':r'y [m]',
+        'zlabel':r'z [m]',
+        'label_fontsize':label_fs,
+        'title_fontsize':title_fs,
+        # 'legend':True,
+        'grid':True,
+        'tick_fontsize':tick_fs,
+    }
+
+    ax.scatter(X0, Y0, Z0,**param_dict_0)
+
+    # # Equalise axes
+
+    max_range = np.array([X0.max()-X0.min(), Y0.max()-Y0.min(), Z0.max()-Z0.min()]).max() / 2.0
+    mid_x = (X0.max()+X0.min()) * 0.5
+    mid_y = (Y0.max()+Y0.min()) * 0.5
+    mid_z = (Z0.max()+Z0.min()) * 0.5
+    ax.set_xlim(mid_x - max_range, mid_x + max_range)
+    ax.set_ylim(mid_y - max_range, mid_y + max_range)
+    ax.set_zlim(mid_z - max_range, mid_z + max_range)
+    padding = 5
+    ax.xaxis.labelpad=padding
+    ax.yaxis.labelpad=padding
+    ax.zaxis.labelpad=padding
+    fig_formatter(ax,opts)
+    plt.tight_layout()
+
+    return fig
+
+def position_distribution_measured(rso):
+    """3D plotter for orbits to be used during debug. It receives an array of positions and
+    displays them in 3D space.
+
+    Arguments:
+        r: array of positions in km.
+    """
+
+    # Define the writing sizes
+    tick_fs = 12
+    label_fs = 14
+    title_fs = 16
+    legend_fs = label_fs
+
+    num_samples = 1000
+
+    np.random.seed(1)
+    state_1 = rso.meas_initial_state
+    state_1 = state_1 - state_1
+    covar_1 = rso.meas_covar
+    r1 = np.random.multivariate_normal(state_1.flatten()[:3], covar_1[:3,:3], num_samples)
+
+    # Definition
+    X1 = r1[:,0]
+    Y1 = r1[:,1]
+    Z1 = r1[:,2] 
+
+    # Plot and show
+
+    fig = plt.figure( figsize = (5,4))
+    ax = fig.add_subplot(111, projection='3d')    
+
+    param_dict_1 = {
+        'color':'red',
+        'label':'measured'
+    }
+    opts = {
+        'xlabel':r'x [m]',
+        'ylabel':r'y [m]',
+        'zlabel':r'z [m]',
+        'label_fontsize':label_fs,
+        'title_fontsize':title_fs,
+        # 'legend':True,
+        'grid':True,
+        'tick_fontsize':tick_fs,
+    }
+
+    ax.scatter(X1, Y1, Z1,**param_dict_1)
+
+    max_range = np.array([X1.max()-X1.min(), Y1.max()-Y1.min(), Z1.max()-Z1.min()]).max() / 2.0
+    mid_x = (X1.max()+X1.min()) * 0.5
+    mid_y = (Y1.max()+Y1.min()) * 0.5
+    mid_z = (Z1.max()+Z1.min()) * 0.5
+    ax.set_xlim(mid_x - max_range, mid_x + max_range)
+    ax.set_ylim(mid_y - max_range, mid_y + max_range)
+    ax.set_zlim(mid_z - max_range, mid_z + max_range)
+
+    # ax.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.4e'))
+    # ax.yaxis.set_major_formatter(mtick.FormatStrFormatter('%.4e'))
+    # ax.zaxis.set_major_formatter(mtick.FormatStrFormatter('%.4e'))
+
+    padding = 5
+    ax.xaxis.labelpad=padding
+    ax.yaxis.labelpad=padding
+    ax.zaxis.labelpad=padding
+    fig_formatter(ax,opts)
+    # plt.constrained_layout()
+
+    return fig
+
 

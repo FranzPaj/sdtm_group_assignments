@@ -43,7 +43,8 @@ num_objs = len(data_dict.keys())
 ### 91686 is the manoeuvre one!
 ### 99002 is the initial orbit determination
 ### 91762 is the object characterisation
-close_encounter_ls = [91332, 91395, 91509, 91686, 91883, 40940]
+close_encounter_ls = [91883, 40940]
+# close_encounter_ls = [91332, 91395, 91509, 91686, 91883, 40940]
 new_encounter_ls = [91762]
 
 #### Is 99002 a new one? What is that? Check
@@ -65,6 +66,8 @@ for elem in data_dict.keys():
 my_norad = 40940
 my_sat = util.Object(data_dict, my_norad)
 obj_dict[my_norad] = my_sat  # ADD LATER, COMMENTED ONLY FOR DEBUGGING
+
+# rso_91883_nom = obj_dict[]
 
 # Define time interval of interest for collision analysis
 tepoch = my_sat.epoch
@@ -112,7 +115,6 @@ for norad_id in close_encounter_ls:
 
     state_params, meas_dict, sensor_params = estimation.read_measurement_file(
         os.path.join(current_dir, 'data', 'states_updated', 'q4_meas_rso_'+str(norad_id)+'.pkl'))
-    
 
     # Observed parameters: - ra
     #                      - dec
@@ -213,6 +215,7 @@ for norad_id in close_encounter_ls:
     print('- Declination: ', RMS_res[1], 'arcsec')
     print('-------------UKF finished------------')
     print()
+
 
 
 #### Add updated data from IOD analysis for RSO 99002 ####
@@ -671,6 +674,41 @@ np.savetxt(obj_filename, matlab_data)
 ######## Plot creation #################
 ########################################
 
+###################################################################################
+# Plot the point distribution at the end of the measurements
+bodies_to_create = ['Sun', 'Earth', 'Moon']
+obj = obj_dict[91883]
+Xo = obj.cartesian_state
+Po = obj.covar
+int_params = {'tudat_integrator': 'rkf78', 'step': 10., 'max_step': 1000., 'min_step': 1e-3, 'rtol': 1e-12,
+              'atol': 1e-12}
+tvec = np.array([obj.epoch, obj.meas_initial_time])
+rso2_params = {}
+rso2_params['mass'] = obj.mass
+rso2_params['area'] = obj.area
+rso2_params['Cd'] = obj.Cd
+rso2_params['Cr'] = obj.Cr
+rso2_params['sph_deg'] = 8
+rso2_params['sph_ord'] = 8
+rso2_params['central_bodies'] = ['Earth']
+rso2_params['bodies_to_create'] = bodies_to_create
+tf, Xf, Pf = propagate_state_and_covar(Xo, Po, tvec, rso2_params,
+                                                int_params)
+Pf = util.remediate_covariance(Pf,1.0E-10)[0]
+obj.propagated_state = Xf 
+obj.propagated_covar = Pf
+norad_id = obj.NORAD_ID
+fig = plot_gen.position_distribution(obj)
+fpath = os.path.join(current_dir, 'output','plots','q4', 'position_distribution', str(norad_id) + '_position_distribution.png')
+fig.savefig(fpath)
+fig = plot_gen.position_distribution_propagated(obj)
+fpath = os.path.join(current_dir, 'output','plots','q4', 'position_distribution', str(norad_id) + '_position_distribution_propagated.png')
+fig.savefig(fpath)
+fig = plot_gen.position_distribution_measured(obj)
+fpath = os.path.join(current_dir, 'output','plots','q4', 'position_distribution', str(norad_id) + '_position_distribution_measured.png')
+fig.savefig(fpath)
+#######################################################################################################
+
 #### Plot the residuals in time ####
 residuals_ls = ['RA', 'DEC']
 for norad_id in close_encounter_ls:
@@ -693,6 +731,8 @@ for norad_id in close_encounter_ls:
     fig = plot_gen.covar_ric(rso)
     fpath = os.path.join(current_dir, 'output','plots','q4', 'ric', str(norad_id) + '_ric_covar.png')
     fig.savefig(fpath)
+
+
 
 
 
