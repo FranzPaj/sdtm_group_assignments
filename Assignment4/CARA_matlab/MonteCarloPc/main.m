@@ -6,8 +6,8 @@ clear all, close all, clc
 addpath ../Pc2D_Foster
 addpath(genpath('../Utils'))
 
-Accuracy        = 0.20; % Desired MC Accuracy (0.01=1%)
-MC_Confidence   = 0.85; % Desired Monte Carlo Confidence Level
+Accuracy        = 0.1; % Desired MC Accuracy (0.01=1%)
+MC_Confidence   = 0.95; % Desired Monte Carlo Confidence Level
 GM              = 3.986004418e14;% Earth gravitational constant mu = GM (EGM-96) [m^3/s^2] 
 LowVelThreshold = 0.05; % 5% of Orbital Period
 expSolution     = 4.20E-01;

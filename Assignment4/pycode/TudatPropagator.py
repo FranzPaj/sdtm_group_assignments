@@ -394,8 +394,8 @@ def propagate_state_and_covar(Xo, Po, tvec, state_params, int_params, bodies=Non
             acceleration_settings_setup['Earth'] = [propagation_setup.acceleration.spherical_harmonic_gravity(sph_deg, sph_ord)]
         
         # Aerodynamic Drag : EXCLUDED FOR QUESTION 2
-        # if Cd > 0.:
-        #     acceleration_settings_setup['Earth'].append(propagation_setup.acceleration.aerodynamic())
+        if Cd > 0.:
+            acceleration_settings_setup['Earth'].append(propagation_setup.acceleration.aerodynamic())
         
     if 'Sun' in bodies_to_create:
         

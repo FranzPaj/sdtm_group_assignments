@@ -3,6 +3,11 @@ from matplotlib.lines import Line2D
 import numpy as np
 from tudatpy import constants
 
+if __name__ == '__main__':
+    from EstimationUtilities import eci2ric
+else:
+    from pycode.EstimationUtilities import eci2ric
+
 
 """Module with reusable plotting functions for generic plotting and single-use plotting functions for the specific project."""
 
@@ -500,5 +505,180 @@ def orbit_generic(r: np.ndarray[float]):
 
     return fig
 
+def residuals_full(rso, boundary_dict, res_to_plot) -> plt.figure:
 
+    # Define the writing sizes
+    tick_fs = 12
+    label_fs = 12
+    title_fs = 12
+    legend_fs = label_fs
+
+    if res_to_plot == 'RA':
+        index = 0
+        ylabel_str = r'$\alpha$ [arcsec]'
+    else:
+        index = 1
+        ylabel_str = r'$\delta$ [arcsec]'
+
+    # Create the figure
+    fig,ax = plt.subplots(figsize=[5,4])
+
+    param_dict = {
+        'color':'red',
+        # 'label':r'$\rho$'
+    }
+    opts = {
+        'xlabel':'Time [hr since epoch]',
+        'ylabel':ylabel_str,
+        # 'xlim':[t[0],t[-1]],
+        'label_fontsize':label_fs,
+        'title_fontsize':title_fs,
+        'grid':True,
+        'tick_fontsize':tick_fs,
+    }
+
+    t = rso.times_full
+    tepoch = rso.epoch
+    t = (t - tepoch)/3600  # Conversion to hours since epoch 
+    residuals = rso.residuals_full[:,index] * 360 / 2 / np.pi * 3600  # Conversion to arcsec
+    boundary = boundary_dict[rso.NORAD_ID]
+
+    ax.scatter(t,residuals,**param_dict)
+    if boundary != 0:
+        ax.axvline(t[boundary], color = 'b', linestyle = 'dashed')
+    fig_formatter(ax,opts)
+    plt.tight_layout()
+
+    return fig
+
+def residuals_cut(rso, boundary_dict, res_to_plot) -> plt.figure:
+
+    # Define the writing sizes
+    tick_fs = 12
+    label_fs = 12
+    title_fs = 12
+    legend_fs = label_fs
+
+    if res_to_plot == 'RA':
+        index = 0
+        ylabel_str = r'$\alpha$ [arcsec]'
+    else:
+        index = 1
+        ylabel_str = r'$\delta$ [arcsec]'
+
+    # Create the figure
+    fig,ax = plt.subplots(figsize=[5,4])
+
+    param_dict = {
+        'color':'red',
+        # 'label':r'$\rho$'
+    }
+    opts = {
+        'xlabel':'Time [hr since epoch]',
+        'ylabel':ylabel_str,
+        # 'xlim':[t[0],t[-1]],
+        'label_fontsize':label_fs,
+        'title_fontsize':title_fs,
+        'grid':True,
+        'tick_fontsize':tick_fs,
+    }
+
+    t = rso.times
+    tepoch = rso.epoch
+    t = (t - tepoch)/3600  # Conversion to hours since epoch 
+    residuals = rso.residuals[:,index] * 360 / 2 / np.pi * 3600  # Conversion to arcsec
+    boundary = boundary_dict[rso.NORAD_ID]
+
+    ax.scatter(t,residuals,**param_dict)
+    fig_formatter(ax,opts)
+    plt.tight_layout()
+
+    return fig
+
+def covar_ric(rso) -> plt.figure:
+
+    # Define the writing sizes
+    tick_fs = 12
+    label_fs = 12
+    title_fs = 12
+    legend_fs = label_fs
+
+    # Create the figure
+    fig,axs = plt.subplots(1,3, figsize=[9,3.5])
+
+    t = rso.times_full
+    tepoch = rso.epoch
+    t = (t - tepoch)/3600  # Conversion to hours since epoch 
+    covar_eci = rso.new_covar[:,:3,:3]
+    states_eci = rso.new_states
+    pos_eci = states_eci[:,:3]
+    vel_eci = states_eci[:,3:6]
+    num_meas = len(t)
+    covar_ric = np.zeros((num_meas,3,3))
+    sigma_bound_r = np.zeros(num_meas)
+    sigma_bound_i = np.zeros(num_meas)
+    sigma_bound_c = np.zeros(num_meas)
+    for i in range(num_meas):
+        covar_ric[i,:,:] = eci2ric(pos_eci[i,:], vel_eci[i,:], covar_eci[i,:,:])
+        sigma_bound_r[i] = 3*np.sqrt(covar_ric[i,0,0])
+        sigma_bound_i[i] = 3*np.sqrt(covar_ric[i,1,1])
+        sigma_bound_c[i] = 3*np.sqrt(covar_ric[i,2,2])
+
+    ax_r = axs[0]
+    param_dict_r = {
+        'color':'black',
+        'linestyle':'dashed',
+        # 'label':r'$\rho$'
+    }
+    opts_r = {
+        'xlabel':'Time [hr since epoch]',
+        'ylabel':r'$\epsilon_R$ [m]',
+        'label_fontsize':label_fs,
+        'title_fontsize':title_fs,
+        'grid':True,
+        'tick_fontsize':tick_fs,
+    }
+    ax_r.plot(t,sigma_bound_r,**param_dict_r)
+    ax_r.plot(t,-sigma_bound_r,**param_dict_r)
+    fig_formatter(ax_r,opts_r)
+
+    ax_i = axs[1]
+    param_dict_i = {
+        'color':'black',
+        'linestyle':'dashed',
+        # 'label':r'$\rho$'
+    }
+    opts_i = {
+        'xlabel':'Time [hr since epoch]',
+        'ylabel':r'$\epsilon_I$ [m]',
+        'label_fontsize':label_fs,
+        'title_fontsize':title_fs,
+        'grid':True,
+        'tick_fontsize':tick_fs,
+    }
+    ax_i.plot(t,sigma_bound_i,**param_dict_i)
+    ax_i.plot(t,-sigma_bound_i,**param_dict_i)
+    fig_formatter(ax_i,opts_i)
+
+    ax_c = axs[2]
+    param_dict_c = {
+        'color':'black',
+        'linestyle':'dashed',
+        # 'label':r'$\rho$'
+    }
+    opts_c = {
+        'xlabel':'Time [hr since epoch]',
+        'ylabel':r'$\epsilon_C$ [m]',
+        'label_fontsize':label_fs,
+        'title_fontsize':title_fs,
+        'grid':True,
+        'tick_fontsize':tick_fs,
+    }
+    ax_c.plot(t,sigma_bound_c,**param_dict_c)
+    ax_c.plot(t,-sigma_bound_c,**param_dict_c)
+    fig_formatter(ax_c,opts_c)
+
+    plt.tight_layout()
+
+    return fig
 

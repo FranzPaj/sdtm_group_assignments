@@ -65,17 +65,18 @@ def write_cdm(epoch, tca, d_euc, d_mahal, speed, rel_pos_ric, Pc, norad_rso, X_s
     # if Pc > 1e-6:
     # if Pc < 1e-6, CARA method does not calculate MC probability
 
+    P_foster = Pc
     # FInd better Foster estimate (if present)
     foster_path = os.path.join(direct, 'Pc_foster.dat')
     if os.path.isfile(foster_path):
         file = pd.read_csv(foster_path, header=None)
-        print('yep, it works!')
         P_foster = file[0][0]
 
     mc_flag = False
     mc_path = os.path.join(direct, 'Pc_MonteCarlo.dat')
     if os.path.isfile(mc_path):
-        print('Yep, also MonteCarlo works!')
+        mc_flag = True
+        print('CDM Mc funziona')
         file = pd.read_csv(mc_path, header=None)
         P_mc = file[0][0]
 
@@ -101,7 +102,7 @@ def write_cdm(epoch, tca, d_euc, d_mahal, speed, rel_pos_ric, Pc, norad_rso, X_s
             {"Column1": "Relative Position R", "Column2": r, "Column3": '[m]'},
             {"Column1": "Relative Position I", "Column2": i, "Column3": '[m]'},
             {"Column1": "Relative Position C", "Column2": c, "Column3": '[m]'},
-            {"Column1": "Collision Probability", "Column2": Pc, "Column3": ''},
+            {"Column1": "Collision Probability", "Column2": P_foster, "Column3": ''},
             {"Column1": "Collision Probability method", "Column2": 'Foster', "Column3": ''},
             {"Column1": "Mahalanobis Distance", "Column2": d_mahal, "Column3": ''}
         ]

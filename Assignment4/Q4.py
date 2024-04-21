@@ -15,7 +15,7 @@ from tudatpy import constants
 import pycode.ConjunctionUtilities as util
 from pycode.ConjunctionUtilities import mu_e
 import pycode.EstimationUtilities as estimation
-from pycode.TudatPropagator_q1 import *
+from pycode.TudatPropagator import *
 from pycode import plot_gen
 
 ####################################
@@ -28,24 +28,37 @@ data_dir = os.path.join(current_dir, 'data', 'group2')
 fname = os.path.join(data_dir, 'estimated_rso_catalog.pkl')
 # Read the relevant objects datafile
 data_dict = util.read_catalog_file(fname)
+# Add the IOD object
+iod_norad_id = 99002
+filename = 'rso_estimated.pkl'
+file_path = os.path.join(current_dir,'output','estimations', 'q3',filename)
+with open(file_path, 'rb') as f:
+    filter_iod_dict = pickle.load(f)
+data_dict[iod_norad_id] = filter_iod_dict[98765]
+
 num_objs = len(data_dict.keys())
 
 
-
 # Define a dictionary of relevant possible impactors as class objects
-# close_encounter_ls = [99002, 91332, 91395, 91509, 91686, 91883, 91762]
 ### 91686 is the manoeuvre one!
 ### 99002 is the initial orbit determination
 ### 91762 is the object characterisation
-# close_encounter_ls = [91509]
-close_encounter_ls = [91332, 91395, 91509, 91686, 91883]
+close_encounter_ls = [91332, 91395, 91509, 91686, 91883, 40940]
+new_encounter_ls = [91762]
 
 #### Is 99002 a new one? What is that? Check
 
 obj_dict = dict()  # Object dictionary
+new_obj_dict = dict()
 for elem in data_dict.keys():
     if elem in close_encounter_ls:
         # Each element of the possible impactors dictionary is an object with useful properties
+        Obj = util.Object(data_dict, elem)
+        obj_dict[elem] = Obj
+    elif elem in new_encounter_ls:
+        Obj = util.Object(data_dict, elem)
+        new_obj_dict[elem] = Obj
+    elif elem == 99002:
         Obj = util.Object(data_dict, elem)
         obj_dict[elem] = Obj
 # Add our object
@@ -78,12 +91,18 @@ int_params = {'tudat_integrator': 'rkf78',
               'atol': 1e-12}
 # Define boundaries on residuals to consider, to avoid initial imprecise estimations
 boundary_dict = {
+    40940: 0,
+    91332: 0,
+    91395: 0,
+    91509: 0,
     91686: 12,
-    40940: 1,
+    91762: 0,
+    91883: 0,
+    99002: 0,
 }
 
 # Extract estimation from measurements using a UKF
-for norad_id in obj_dict:
+for norad_id in close_encounter_ls:
 
     rso = obj_dict[norad_id]
 
@@ -94,16 +113,24 @@ for norad_id in obj_dict:
     state_params, meas_dict, sensor_params = estimation.read_measurement_file(
         os.path.join(current_dir, 'data', 'states_updated', 'q4_meas_rso_'+str(norad_id)+'.pkl'))
     
+
+    # Observed parameters: - ra
+    #                      - dec
+    # Noise of the sensor: - 'ra': 4.84813681109536e-06 rad, 1 arcsec
+    #                      - 'dec': 4.84813681109536e-06 rad, 1 arcsec
+
+    
     # Consider RSO which executed manoeuvre
     if norad_id == 91686:
         # Elaborate maneouvre estimation data
         filename = 'ukf_afterman.pkl'
-        file_path = os.path.join(current_dir,'output',filename)
+        file_path = os.path.join(current_dir,'output', 'estimations', 'q2',filename)
         with open(file_path, 'rb') as f:
             filter_man_dict = pickle.load(f)
         final_time_man = list(filter_man_dict)[-1]
         final_state_man = filter_man_dict[final_time_man]['state']
         final_covar_man = filter_man_dict[final_time_man]['covar']
+        final_covar_man = util.remediate_covariance(final_covar_man,1.0E-09)[0]
         state_params['state'] = final_state_man
         state_params['covar'] = final_covar_man
         state_params['UTC'] = datetime_to_python(date_time_from_epoch(final_time_man))
@@ -112,17 +139,33 @@ for norad_id in obj_dict:
         # Eliminate the pre-manoeuvre data
         time_manoeuvre = tepoch +  8 * 3600  # s
         time_meas = meas_dict['tk_list']
+        # print((time_meas[0] - tepoch)/3600)
         ind_manoeuvre = np.digitize(time_manoeuvre, time_meas) + 1
         meas_dict['tk_list'] = meas_dict['tk_list'][ind_manoeuvre:]
         meas_dict['Yk_list'] = meas_dict['Yk_list'][ind_manoeuvre:]
 
-    # Optical 2
+    # Optical parameters
+    # Setup 1
+    # filter_params = {
+    #     'Qeci': 1.0E-09 * np.diag([1., 1., 1.]),
+    #     'Qric': 0 * np.diag([1., 1., 1.]),
+    #     'alpha': 1.0E-4,
+    #     'gap_seconds': 100
+    # }
+    # Setup 2
     filter_params = {
         'Qeci': 0 * np.diag([1., 1., 1.]),
-        'Qric': 5.0E-15 * np.diag([20., 1., 1.]),
-        'alpha': 1.0E-3,
-        'gap_seconds': 1 * 3600
+        'Qric': 5.0E-14 * np.diag([1., 1., 1.]),
+        'alpha': 1.0E-03,
+        'gap_seconds': 100
     }
+
+    # if norad_id == 91883:
+    #     time_split = tepoch + 5 * 3600
+    #     time_new_meas = meas_dict['tk_list']
+    #     ind_new_meas = np.digitize(time_split,time_new_meas) + 1
+    #     meas_dict['tk_list'] = meas_dict['tk_list'][ind_new_meas:]
+    #     meas_dict['Yk_list'] = meas_dict['Yk_list'][ind_new_meas:]
 
     filter_output = estimation.ukf(state_params, meas_dict, sensor_params, int_params, filter_params, None)
     measurement_times = np.array(list(filter_output.keys()))
@@ -136,18 +179,24 @@ for norad_id in obj_dict:
         new_states[i,:] = filter_output[measurement_times[i]]['state'].T
         new_covar[i,:,:] = filter_output[measurement_times[i]]['covar']
     residuals_full = residuals
+    times_full = measurement_times
 
     if norad_id in boundary_dict.keys():
         boundary = boundary_dict[norad_id]
         residuals = residuals_full[boundary:]
+        times = times_full[boundary:]
 
     RMS_res = np.sqrt(1 / num_meas * np.einsum('ij,ij->j', residuals, residuals))
+    # Convert to arcsec
+    RMS_res = RMS_res * 360 / 2 / np.pi * 3600
 
     rso.RMS_res = RMS_res
     rso.residuals_full = residuals_full
     rso.new_states = new_states
     rso.new_covar = new_covar
     rso.residuals = residuals
+    rso.times_full = times_full
+    rso.times = times
 
     rso.meas_initial_state = new_states[-1,:].reshape((6,1))
     meas_covar = new_covar[-1,:,:]
@@ -160,56 +209,25 @@ for norad_id in obj_dict:
 
     # Housekeeping data
     print('Residuals RMS:')
-    print('- RA: ', RMS_res[0], 'rad')
-    print('- Declination: ', RMS_res[1], 'rad')
+    print('- RA: ', RMS_res[0], 'arcsec')
+    print('- Declination: ', RMS_res[1], 'arcsec')
     print('-------------UKF finished------------')
     print()
 
-    # if norad_id == my_norad:
-    #     # print(my_sat.keplerian_state)
-    #     # print(cartesian_to_keplerian(my_sat.meas_initial_state, mu_e))
-    #     tvec = np.array([tepoch, rso.meas_initial_time])
-    #     Xo = my_sat.cartesian_state
-    #     # Define propagation parameters
-    #     bodies_to_create = ['Sun', 'Earth', 'Moon']
-    #     rso1_params = {}
-    #     rso1_params['mass'] = my_sat.mass
-    #     rso1_params['area'] = my_sat.area
-    #     rso1_params['Cd'] = my_sat.Cd
-    #     rso1_params['Cr'] = my_sat.Cr
-    #     rso1_params['sph_deg'] = 8
-    #     rso1_params['sph_ord'] = 8
-    #     rso1_params['central_bodies'] = ['Earth']
-    #     rso1_params['bodies_to_create'] = bodies_to_create
-    #     # Define integration parameters
-    #     int_params = {}
-    #     int_params['tudat_integrator'] = 'rkf78'
-    #     int_params['step'] = 10.
-    #     int_params['max_step'] = 1000.
-    #     int_params['min_step'] = 1e-3
-    #     int_params['rtol'] = 1e-12
-    #     int_params['atol'] = 1e-12
-    #     tf, Xf = propagate_orbit(Xo,tvec,rso1_params,int_params )
-    #     print(Xf[-1,:])
-    #     print(rso.meas_initial_state)
 
-        # fig = plot_gen.kep_plot(my_sat.keplerian_state - cartesian_to_keplerian(my_sat.meas_initial_state, mu_e))
+#### Add updated data from IOD analysis for RSO 99002 ####
+norad_id = iod_norad_id
+rso = obj_dict[norad_id]
+rso.meas_initial_state = rso.cartesian_state
+rso.meas_covar = rso.covar
+rso.meas_initial_time = rso.epoch
+rso.meas_trange = np.array([rso.epoch, tend])
+obj_dict[norad_id] = rso
 
-    # print(norad_id, 'final measurement time:', (measurement_times[-1] - tepoch)/3600)
-    # plt.scatter(measurement_times[boundary:],residuals[boundary:,0])
-    # plt.show()
-    # plt.scatter(measurement_times[boundary:],residuals[boundary:,1])
-    # plt.show()
-
-####### Also ADD THE NEW OBJECTS!!!
-
-# Remove my sat from impactors now that its state and covariance has been updated
 
 ######## Obtain states of my_sat at the end of measurements ########
-
 my_sat_dict = {}
 my_sat_dict['nominal'] = my_sat
-
 # Define propagation parameters
 bodies_to_create = ['Sun', 'Earth', 'Moon']
 rso1_params = {}
@@ -229,8 +247,7 @@ int_params['max_step'] = 1000.
 int_params['min_step'] = 1e-3
 int_params['rtol'] = 1e-12
 int_params['atol'] = 1e-12
-
-# Propagate my_sat to the last observation conducted for each rso
+# Propagate my_sat to the last observation conducted for each rso or viceversa
 for norad_id in obj_dict:
 
     if norad_id == my_norad:
@@ -243,7 +260,6 @@ for norad_id in obj_dict:
 
     if my_sat_meas_tf > rso_meas_tf:
         tvec = np.array([rso_meas_tf, my_sat_meas_tf])
-        print((tvec - tepoch)/3600)
         rso2_params = {}
         rso2_params['mass'] = rso.mass
         rso2_params['area'] = rso.area
@@ -272,7 +288,6 @@ for norad_id in obj_dict:
     elif rso_meas_tf > my_sat_meas_tf:
         # Define integration limits
         tvec = np.array([my_sat_meas_tf, rso_meas_tf])
-        print((tvec - tepoch)/3600)
 
         Xo = my_sat.meas_initial_state
         Po = my_sat.meas_covar
@@ -287,10 +302,25 @@ for norad_id in obj_dict:
         # my_sat_new.meas_tf = 0
         my_sat_dict[norad_id] = deepcopy(my_sat_new)
 
-obj_dict.pop(my_norad)  # COMMENTED ONLY FOR DEBUGGING!
 
+# Add new objects without measurements
+for norad_id in new_obj_dict:
+    rso = new_obj_dict[norad_id]
+    my_sat_new = deepcopy(my_sat)
+    my_sat_dict[norad_id] = my_sat_new
+    rso.meas_initial_state = rso.cartesian_state
+    rso.meas_covar = rso.covar
+    rso.meas_initial_time = rso.epoch
+    rso.meas_trange = np.array([rso.epoch, tend])
+    if norad_id == 91762:
+        rso.mass = 1.0  # Implement newfound mass from Q1
+    obj_dict[norad_id] = rso
 
-# print(my_sat_dict.keys())
+print(obj_dict.keys())
+
+obj_dict_full = obj_dict.copy()
+obj_dict.pop(my_norad)
+
 print('Number of analysed RSOs:', len(my_sat_dict.keys()))
 
 
@@ -404,7 +434,7 @@ for norad_id in obj_dict.keys():
     Xo = obj.meas_initial_state
     rso_params = {'mass': obj.mass, 'area': obj.area, 'Cd': obj.Cd, 'Cr': obj.Cr, 'sph_deg': 8,
                   'sph_ord': 8, 'central_bodies': ['Earth'], 'bodies_to_create': bodies_to_create}
-
+    
     print('RSO :', norad_id)
     print('Propagation around estimated TCA to find better approximation')
     # First propagation to final epoch
@@ -440,6 +470,7 @@ for norad_id in obj_dict.keys():
             check = True
             min_dist = dist
             tca_real = t_rso_back[i]
+            Xdebug = X_rso_back[i,0:3]
 
     for i in range(len(t_rso_for)):
         dist = np.linalg.norm(X_rso_for[i, 0:3] - X_sat_for[i, 0:3])
@@ -447,6 +478,7 @@ for norad_id in obj_dict.keys():
             check = True
             min_dist = dist
             tca_real = t_rso_for[i]
+            Xdebug = X_rso_for[i,0:3]
 
     if check is True:
         print('Final closest distance: ', min_dist, '\n')
@@ -454,12 +486,14 @@ for norad_id in obj_dict.keys():
         print('Difference from Denenberg method:\n'
               'Dist difference: ', min_dist - obj.tca_rho_list[0], '\n'
               'Time diff: ', tca_real - obj.tca_T_list[0])
+        # print(Xdebug)
     else:
         print('Final closest distance and TCA coincident with Denenberg method\n'
               'Min distance: ', min_dist, '\n'
               'TCA: ', obj.tca_T_list[0])
     print('-------------------------------\n')
     obj.tca_T_list[0] = tca_real
+    # print((tca_real - tepoch)/3600)
     obj.tca_rho_list[0] = min_dist
 
 
@@ -491,8 +525,7 @@ for norad_id in obj_dict.keys():
     obj = obj_dict[norad_id]
     Xo = obj.meas_initial_state
     Po = obj.meas_covar
-    Po = util.remediate_covariance(Po, 0.00001)[0]
-    # print(np.shape(Xo))
+    Po = util.remediate_covariance(Po, 1.0E-09)[0]
     rso_params = {'mass': obj.mass, 'area': obj.area, 'Cd': obj.Cd, 'Cr': obj.Cr, 'sph_deg': 8,
                   'sph_ord': 8, 'central_bodies': ['Earth'], 'bodies_to_create': bodies_to_create}
 
@@ -503,9 +536,13 @@ for norad_id in obj_dict.keys():
     prop = {'tf': np.array([]), 'Xf': np.array([]), 'Pf': np.array([])}
 
     for i in range(len(obj.tca_T_list)):
-        print([obj.meas_initial_time, obj.tca_T_list[i]])
         tvec = np.array([obj.meas_initial_time, obj.tca_T_list[i]])
+        # print(norad_id, rso_params)
         tf[i], Xf_new, Pf_matrix = propagate_state_and_covar(Xo, Po, tvec, rso_params, int_params)
+        # t_rso, X_rso_prop = propagate_orbit(Xo, tvec, rso_params, int_params)
+        # if norad_id == 91762:
+        #     print(t_rso[-1], tf[i])
+        #     print(X_rso_prop[-1,:3], Xf_new[:3])
         Pf_matrix = util.remediate_covariance(Pf_matrix, 0)[0]
         Xf[:, i] = Xf_new.reshape((6,))
         inx = 6 * i
@@ -628,6 +665,34 @@ for norad_id in obj_dict.keys():
     i += 1
 
 np.savetxt(obj_filename, matlab_data)
+
+
+########################################
+######## Plot creation #################
+########################################
+
+#### Plot the residuals in time ####
+residuals_ls = ['RA', 'DEC']
+for norad_id in close_encounter_ls:
+    rso = obj_dict_full[norad_id]
+    for residual_type in residuals_ls:
+        fig = plot_gen.residuals_full(rso, boundary_dict, residual_type)
+        fpath = os.path.join(current_dir, 'output','plots','q4', 'residuals',  str(norad_id)+'_' + residual_type + '_residuals_full.png')
+        fig.savefig(fpath)
+
+        fig = plot_gen.residuals_cut(rso, boundary_dict, residual_type)
+        fpath = os.path.join(current_dir, 'output','plots','q4', 'residuals', str(norad_id)+'_' + residual_type + '_residuals_cut.png')
+        fig.savefig(fpath)
+
+        plt.close()
+
+#### Plot the RIC covariance in time ####
+for norad_id in close_encounter_ls:
+
+    rso = obj_dict_full[norad_id]
+    fig = plot_gen.covar_ric(rso)
+    fpath = os.path.join(current_dir, 'output','plots','q4', 'ric', str(norad_id) + '_ric_covar.png')
+    fig.savefig(fpath)
 
 
 

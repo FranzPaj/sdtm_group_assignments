@@ -7,9 +7,9 @@ import matplotlib.pyplot as plt
 import pickle
 
 if __name__ == '__main__':
-    import TudatPropagator_q1 as prop
+    import TudatPropagator as prop
 else:
-    import pycode.TudatPropagator_q1 as prop
+    import pycode.TudatPropagator as prop
 
 
 ###############################################################################
@@ -261,6 +261,7 @@ def ukf(state_params, meas_dict, sensor_params, int_params, filter_params, bodie
         Pbar += np.dot(Gamma, np.dot(Q, Gamma.T))
 
         # Recompute sigma points to incorporate process noise
+        Pbar = remediate_covariance(Pbar, 1.0E-09)[0]
         sqP = np.linalg.cholesky(Pbar)
         Xrep = np.tile(Xbar, (1, n))
         chi_bar = np.concatenate((Xbar, Xrep+(gam*sqP), Xrep-(gam*sqP)), axis=1) 
@@ -908,6 +909,69 @@ def optical_analysis(truth_state, state, meas,
 # and should not be edited.
 #
 ###############################################################################
+
+def remediate_covariance(Praw, Lclip, Lraw=[], Vraw=[]):
+    '''
+    This function provides a level of exception handling by detecting and 
+    remediating non-positive definite covariances in the collision probability
+    calculation, following the procedure in Hall et al. (Ref 2). This code has
+    been ported from the MATLAB library developed by the NASA CARA team, 
+    listed in Ref 3.
+    
+    The function employs an eigenvalue clipping method, such that eigenvalues
+    below the specified Lclip value are reset to Lclip. The covariance matrix,
+    determinant, and inverse are then recomputed using the original 
+    eigenvectors and reset eigenvalues to ensure the output is positive (semi)
+    definite. An input of Lclip = 0 will result in the output being positive
+    semi-definite.
+    
+    Parameters
+    ------
+    Praw : nxn numpy array
+        unremediated covariance matrix    
+    
+    Returns
+    ------
+    
+    
+    '''
+    
+    # Ensure the covariance has all real elements
+    if not np.all(np.isreal(Praw)):
+        print('Error: input Praw is not real!')
+        print(Praw)
+        return
+    
+    # Calculate eigenvectors and eigenvalues if not input
+    if len(Lraw) == 0 and len(Vraw) == 0:
+        Lraw, Vraw = np.linalg.eig(Praw)
+        
+    # Define the positive definite status of Praw
+    posdef_status = np.sign(min(Lraw))
+    
+    # Clip eigenvalues if needed, and record clipping status
+    Lrem = Lraw.copy()
+    if min(Lraw) < Lclip:
+        clip_status = True
+        Lrem[Lraw < Lclip] = Lclip
+    else:
+        clip_status = False
+        
+    # Determinant of remediated covariance
+    Pdet = np.prod(Lrem)
+    
+    # Inverse of remediated covariance
+    Pinv = np.dot(Vraw, np.dot(np.diag(1./Lrem), Vraw.T))
+    
+    # Remediated covariance
+    if clip_status:
+        Prem = np.dot(Vraw, np.dot(np.diag(Lrem), Vraw.T))
+    else:
+        Prem = Praw.copy()
+    
+    
+    return Prem, Pdet, Pinv, posdef_status, clip_status
+
 
 
 ###############################################################################
