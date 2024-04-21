@@ -41,13 +41,13 @@ import time
 
 from tudatpy.astro.time_conversion import epoch_from_date_time_components
 from tudatpy.astro import element_conversion
-from tudatpy.interface import spice 
+from tudatpy.interface import spice
 from tudatpy import constants
+
 if __name__ == '__main__':
     import TudatPropagator as prop  # For unit testing
 else:
     import pycode.TudatPropagator as prop
-
 
 ###############################################################################
 # Homebrew Classes and Useful Constants
@@ -55,21 +55,22 @@ else:
 
 mu_e = spice.get_body_gravitational_parameter('Earth')  # Earth gravitational parameter
 
+
 class Object:
 
-    def __init__(self,obj_dict,elem):
-
+    def __init__(self, obj_dict, elem):
         # Define the orbital elements and characteristic of a certain spacecraft or debris
         self.NORAD_ID = elem  # NORAD ID of the element
         self.obj_dict = obj_dict[elem]
         # Object epoch
         self.utc = obj_dict[elem]['UTC']  # UTC of the time corresponding to the object state
         self.epoch = epoch_from_date_time_components(
-            self.utc.year, self.utc.month, self.utc.day, self.utc.hour, 
+            self.utc.year, self.utc.month, self.utc.day, self.utc.hour,
             self.utc.minute, float(self.utc.second))  # Epoch since J2000 for TudatPy - s
         # Object state and covariance
         self.cartesian_state = obj_dict[elem]['state']  # Cartesian state at epoch
-        self.keplerian_state = element_conversion.cartesian_to_keplerian(self.cartesian_state,mu_e)  # Keplerian state at epoch
+        self.keplerian_state = element_conversion.cartesian_to_keplerian(self.cartesian_state,
+                                                                         mu_e)  # Keplerian state at epoch
         self.covar = obj_dict[elem]['covar']  # Uncertainty covariance at epoch
         # Object properties
         self.mass = obj_dict[elem]['mass']  # Object mass
@@ -84,23 +85,21 @@ class Object:
         self.raan = self.keplerian_state[3]  # RAAN
         self.rp = self.sma * (1 - self.ecc)  # Radius of periapsis
         self.ra = self.sma * (1 + self.ecc)  # Radius of apoapsis
-        self.T_orb = 2 * np.pi * np.sqrt(self.sma**3 / mu_e)
-
-        self.new_meas = False
+        self.T_orb = 2 * np.pi * np.sqrt(self.sma ** 3 / mu_e)
 
         # to propagate at TCA
         self.tf = None
         self.Xf = None
         self.Pf = None
 
-    def time2theta(self, theta:float) -> float:
+    def time2theta(self, theta: float) -> float:
         theta0 = self.keplerian_state[5]
         M0 = element_conversion.true_to_mean_anomaly(self.ecc, theta0)
         M = element_conversion.true_to_mean_anomaly(self.ecc, theta)
         n = 2 * np.pi / self.T_orb
         delta_t = (M - M0) / n
         return delta_t
-    
+
     def true2eccentric(self, theta):
         E = element_conversion.true_to_eccentric_anomaly(theta, self.ecc)
         return E
@@ -109,6 +108,7 @@ class Object:
         self.tf = None
         self.Xf = None
         self.Pf = None
+
 
 ###############################################################################
 # Basic I/O
@@ -143,11 +143,11 @@ def read_catalog_file(rso_file):
     '''
 
     # Load RSO dict
-    pklFile = open(rso_file, 'rb' )
-    data = pickle.load( pklFile )
+    pklFile = open(rso_file, 'rb')
+    data = pickle.load(pklFile)
     rso_dict = data[0]
-    pklFile.close()    
-    
+    pklFile.close()
+
     return rso_dict
 
 
@@ -169,7 +169,7 @@ def perigee_apogee_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euc
 
     delete_ls = list()
     # Find impossible conjunctions
-    for norad_id in obj_dict.keys(): 
+    for norad_id in obj_dict.keys():
         obj = obj_dict[norad_id]
         q = max([my_sat.rp, obj.rp])  # Max of the two perigees
         Q = min([my_sat.ra, obj.ra])  # Min of the two apogees
@@ -183,7 +183,8 @@ def perigee_apogee_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euc
     return obj_dict
 
 
-def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclidean_distance: float) -> tuple[list[Object], np.ndarray[float]]:
+def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclidean_distance: float) -> tuple[
+    list[Object], np.ndarray[float]]:
     """Geometrical filter that eliminates possible conjunctions if the minimum euclidean distance between the orbits 
     of the object and of the possible impactor is bigger than a given distance. The naming convention and method follows from 
     Hoots et al. (1984).
@@ -202,7 +203,7 @@ def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclid
 
     # Define orbital elements of my_sat
     w_p_original = orbit_orientation(my_sat.keplerian_state)
-    w_p = np.cross(my_sat.cartesian_state.flatten()[:3],my_sat.cartesian_state.flatten()[3:6])
+    w_p = np.cross(my_sat.cartesian_state.flatten()[:3], my_sat.cartesian_state.flatten()[3:6])
     w_p = w_p / np.linalg.norm(w_p)
     n_p = node_line(my_sat.keplerian_state)
     raan_p = my_sat.keplerian_state[4]
@@ -211,14 +212,14 @@ def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclid
     ecc_p = my_sat.keplerian_state[1]
     sma_p = my_sat.keplerian_state[0]
 
-    i=0
+    i = 0
     # Find impossible conjunctions
-    for norad_id in obj_dict.keys(): 
+    for norad_id in obj_dict.keys():
 
         obj = obj_dict[norad_id]
         # Define orbital elements of obj
         w_s_original = orbit_orientation(obj.keplerian_state)
-        w_s = np.cross(obj.cartesian_state.flatten()[:3],obj.cartesian_state.flatten()[3:6])
+        w_s = np.cross(obj.cartesian_state.flatten()[:3], obj.cartesian_state.flatten()[3:6])
         w_s = w_s / np.linalg.norm(w_s)
         # print(w_s_original, w_s)
         n_s = node_line(obj.keplerian_state)
@@ -232,9 +233,9 @@ def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclid
         i_r = np.arccos(np.dot(w_s, w_p))
         # print(np.linalg.norm(k_vec), np.sin(i_r))  # SAME!
 
-        Delta_p = np.arccos(np.dot(k_vec,n_p) / np.linalg.norm(k_vec))
+        Delta_p = np.arccos(np.dot(k_vec, n_p) / np.linalg.norm(k_vec))
         # Delta_p = np.arccos(1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) - np.sin(incl_s) * np.cos(incl_p) * np.cos(raan_p - raan_s)))
-        Delta_s = np.arccos(np.dot(k_vec,n_s) / np.linalg.norm(k_vec))
+        Delta_s = np.arccos(np.dot(k_vec, n_s) / np.linalg.norm(k_vec))
         # Delta_s = np.arccos(1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) * np.cos(raan_p - raan_s) - np.sin(incl_s) * np.cos(incl_p) ))
         # Eliminate quadrant ambiguity
         sin_Delta_p = 1 / np.sin(i_r) * (np.sin(incl_s) * np.sin(raan_p - raan_s))
@@ -243,7 +244,7 @@ def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclid
         sin_Delta_s = 1 / np.sin(i_r) * (np.sin(incl_p) * np.sin(raan_p - raan_s))
         if sin_Delta_s < 0:
             Delta_s = - Delta_s
-        
+
         # print(np.cos(Delta_p), 1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) - np.sin(incl_s) * np.cos(incl_p) * np.cos(raan_p - raan_s)))
         # SHOULD BE SAME!!!
 
@@ -255,22 +256,21 @@ def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclid
         angle_th = np.deg2rad(0.0001)
 
         for j in range(2):
-            
+
             # Look first for case 1, then for case 2 on the opposite side of the orbit
             fp = fp + j * np.pi
             fs = fs + j * np.pi
             # Initialise convergence factors
-            h = 2*np.pi
-            k = 2*np.pi
+            h = 2 * np.pi
+            k = 2 * np.pi
 
             # Look for minimum distance with iterative method
             while np.abs(h) > angle_th or np.abs(k) > angle_th:
-
                 # Lots of ugly orbital maths - following Hoots et al.
                 ur_p = fp + omega_p - Delta_p
                 ur_s = fs + omega_s - Delta_s
-                r_p = sma_p * (1 - ecc_p**2) / (1 + ecc_p * np.cos(fp))
-                r_s = sma_s * (1 - ecc_s**2) / (1 + ecc_s * np.cos(fs))
+                r_p = sma_p * (1 - ecc_p ** 2) / (1 + ecc_p * np.cos(fp))
+                r_s = sma_s * (1 - ecc_s ** 2) / (1 + ecc_s * np.cos(fs))
                 ax_p = ecc_p * np.cos(omega_p - Delta_p)
                 ay_p = ecc_p * np.sin(omega_p - Delta_p)
                 ax_s = ecc_s * np.cos(omega_s - Delta_s)
@@ -291,17 +291,16 @@ def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclid
                 dG_dfs = r_s * ecc_s * np.cos(E_s) + r_p * np.cos(gamma)
 
                 h = (F * dG_dfs - G * dF_dfs) / (dF_dfs * dG_dfp - dF_dfp * dG_dfs)
-                k = (G * dF_dfp - F * dG_dfp) / (dF_dfs * dG_dfp - dF_dfp * dG_dfs) 
+                k = (G * dF_dfp - F * dG_dfp) / (dF_dfs * dG_dfp - dF_dfp * dG_dfs)
 
                 fp = fp + h
                 fs = fs + k
 
-            r_rel_ls[j] = np.sqrt(r_p**2 + r_s**2 - 2 * r_p * r_s * np.cos(gamma))
-        
+            r_rel_ls[j] = np.sqrt(r_p ** 2 + r_s ** 2 - 2 * r_p * r_s * np.cos(gamma))
 
         r_rel = min(r_rel_ls)
         rel_dist_results[i] = r_rel
-        i = i+1
+        i = i + 1
         # Identify impossible impactors
         if r_rel > acceptable_euclidean_distance:
             delete_ls.append(norad_id)
@@ -313,7 +312,8 @@ def geometrical_filter(my_sat: Object, obj_dict: dict[Object], acceptable_euclid
     return obj_dict, rel_dist_results
 
 
-def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable_euclidean_distance: float) -> tuple[list[Object], np.ndarray[float]]:
+def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable_euclidean_distance: float) -> tuple[
+    list[Object], np.ndarray[float]]:
     """Time filter that eliminates possible conjunctions if the time range in which an impactor could be in range of a target object 
     is not compatible with the orbital motion of the target. The naming convention and method follows from Hoots et al. (1984).
      
@@ -332,16 +332,15 @@ def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable
 
     # Define orbital elements of my_sat
     w_p = orbit_orientation(my_sat.keplerian_state)
-    w_p = np.cross(my_sat.cartesian_state.flatten()[:3],my_sat.cartesian_state.flatten()[3:6])
+    w_p = np.cross(my_sat.cartesian_state.flatten()[:3], my_sat.cartesian_state.flatten()[3:6])
     w_p = w_p / np.linalg.norm(w_p)
     n_p = node_line(my_sat.keplerian_state)
     # Define elements for quadrant ambiguity correction
     incl_p = my_sat.keplerian_state[2]
     raan_p = my_sat.keplerian_state[4]
 
-
     # Find impossible conjunctions
-    for norad_id in obj_dict.keys(): 
+    for norad_id in obj_dict.keys():
 
         # print('-----------------------')
         # print('NORAD ID:', norad_id)
@@ -349,7 +348,7 @@ def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable
         obj = obj_dict[norad_id]
         # Define orbital elements of obj
         w_s = orbit_orientation(obj.keplerian_state)
-        w_s = np.cross(obj.cartesian_state.flatten()[:3],obj.cartesian_state.flatten()[3:6])
+        w_s = np.cross(obj.cartesian_state.flatten()[:3], obj.cartesian_state.flatten()[3:6])
         w_s = w_s / np.linalg.norm(w_s)
         n_s = node_line(obj.keplerian_state)
         # Calculate relevant vectors
@@ -358,10 +357,10 @@ def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable
         # Define elements for quadrant ambiguity correction
         incl_s = obj.keplerian_state[2]
         raan_s = obj.keplerian_state[4]
-        
-        Delta_p = np.arccos(np.dot(k_vec,n_p) / np.linalg.norm(k_vec))
+
+        Delta_p = np.arccos(np.dot(k_vec, n_p) / np.linalg.norm(k_vec))
         # Delta_p = np.arccos(1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) - np.sin(incl_s) * np.cos(incl_p) * np.cos(raan_p - raan_s)))
-        Delta_s = np.arccos(np.dot(k_vec,n_s) / np.linalg.norm(k_vec))
+        Delta_s = np.arccos(np.dot(k_vec, n_s) / np.linalg.norm(k_vec))
         # Delta_s = np.arccos(1/np.sin(i_r) * (np.sin(incl_p) * np.cos(incl_s) * np.cos(raan_p - raan_s) - np.sin(incl_s) * np.cos(incl_p) ))
         Delta_corr = [Delta_p, Delta_s]
         sin_Delta_p = 1 / np.sin(i_r) * (np.sin(incl_s) * np.sin(raan_p - raan_s))
@@ -388,10 +387,10 @@ def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable
             # Correct quadrant ambiguity
             Delta = Delta_corr[obj_list.index(rso)]
 
-            alpha = sma * (1 - ecc**2) * np.sin(i_r)
+            alpha = sma * (1 - ecc ** 2) * np.sin(i_r)
             ax = ecc * np.cos(omega - Delta)
             ay = ecc * np.sin(omega - Delta)
-            Q = alpha * (alpha  - 2 * D * ay) - (1 - ecc**2) * D**2
+            Q = alpha * (alpha - 2 * D * ay) - (1 - ecc ** 2) * D ** 2
             # Adjust case for coplanar orbits
             if Q < 0:
                 flag_coplanar = True
@@ -400,8 +399,9 @@ def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable
 
             # Find the relative angles for closeness windows
             # First window
-            cos_ur_1 = (-D**2 * ax - (alpha - D * ay) * np.sqrt(Q)) / (alpha * (alpha - 2 * D * ay) + D**2 * ecc**2)
-            
+            cos_ur_1 = (-D ** 2 * ax - (alpha - D * ay) * np.sqrt(Q)) / (
+                        alpha * (alpha - 2 * D * ay) + D ** 2 * ecc ** 2)
+
             # Adjust case for coplanar orbits
             if cos_ur_1 > 1:
                 flag_coplanar = True
@@ -410,10 +410,11 @@ def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable
 
             ur_1 = np.arccos(cos_ur_1)
             f1 = ur_1 - omega + Delta
-            ur_2 = - ur_1 
+            ur_2 = - ur_1
             f2 = ur_2 - omega + Delta
             # Second window
-            cos_ur_4 = (-D**2 * ax + (alpha - D * ay) * np.sqrt(Q)) / (alpha * (alpha - 2 * D * ay) + D**2 * ecc**2)
+            cos_ur_4 = (-D ** 2 * ax + (alpha - D * ay) * np.sqrt(Q)) / (
+                        alpha * (alpha - 2 * D * ay) + D ** 2 * ecc ** 2)
 
             # Adjust case for coplanar orbits
             if cos_ur_4 > 1:
@@ -426,7 +427,7 @@ def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable
             ur_3 = - ur_4
             f3 = ur_3 - omega + Delta
             # List of true anomalies without periodicity
-            f_ls = [[f1 % (2*np.pi), f2 % (2*np.pi)], [f3 % (2*np.pi), f4 % (2*np.pi)]]
+            f_ls = [[f1 % (2 * np.pi), f2 % (2 * np.pi)], [f3 % (2 * np.pi), f4 % (2 * np.pi)]]
 
             # DEBUGGING
             # print('True anomaly:', np.rad2deg(f_ls[0][0]), np.rad2deg(f_ls[0][1]), '|', np.rad2deg(f_ls[1][0]), np.rad2deg(f_ls[1][1]))
@@ -445,13 +446,13 @@ def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable
                     tf = tf0 + rev * rso.T_orb
 
                     # Truncate at borders of relevant timespan
-                    if ti<0:
-                        if tf<=0:
+                    if ti < 0:
+                        if tf <= 0:
                             continue
                         else:
                             ti = 0
-                    if tf>tspan:
-                        if ti>=tspan:
+                    if tf > tspan:
+                        if ti >= tspan:
                             continue
                         else:
                             tf = tspan
@@ -475,13 +476,13 @@ def time_filter(my_sat: Object, obj_dict: dict[Object], tspan: float, acceptable
                 for obj_transit in transit_comparison_ls[1]:
                     t2 = obj_transit[0]
                     t3 = obj_transit[1]
-                    if t2<=t0<=t3 or t2<=t1<=t3 or t0<=t2<=t1 or t0<=t3<=t1:
+                    if t2 <= t0 <= t3 or t2 <= t1 <= t3 or t0 <= t2 <= t1 or t0 <= t3 <= t1:
                         flag_intersect = True
 
         # Identify impossible impactors
         if flag_intersect == False:
             delete_ls.append(norad_id)
-                
+
     # Eliminate impossible impactors
     for norad_id in delete_ls:
         obj_dict.pop(norad_id)
@@ -530,64 +531,67 @@ def Pc2D_Foster(X1, P1, X2, P2, HBR, rtol=1e-8, HBR_type='circle'):
         probability of collision
     
     '''
-    
+
     # Retrieve and combine the position covariance
-    Peci = P1[0:3,0:3] + P2[0:3,0:3]
-    
+    Peci = P1[0:3, 0:3] + P2[0:3, 0:3]
+
     # Construct the relative encounter frame
-    r1 = np.reshape(X1[0:3], (3,1))
-    v1 = np.reshape(X1[3:6], (3,1))
-    r2 = np.reshape(X2[0:3], (3,1))
-    v2 = np.reshape(X2[3:6], (3,1))
+    r1 = np.reshape(X1[0:3], (3, 1))
+    v1 = np.reshape(X1[3:6], (3, 1))
+    r2 = np.reshape(X2[0:3], (3, 1))
+    v2 = np.reshape(X2[3:6], (3, 1))
     r = r1 - r2
     v = v1 - v2
     h = np.cross(r, v, axis=0)
-    
+
     # Unit vectors of relative encounter frame
-    yhat = v/np.linalg.norm(v)
-    zhat = h/np.linalg.norm(h)
+    yhat = v / np.linalg.norm(v)
+    zhat = h / np.linalg.norm(h)
     xhat = np.cross(yhat, zhat, axis=0)
-    
+
     # Transformation matrix
     eci2xyz = np.concatenate((xhat.T, yhat.T, zhat.T))
-    
+
     # Transform combined covariance to relative encounter frame (xyz)
     Pxyz = np.dot(eci2xyz, np.dot(Peci, eci2xyz.T))
-    
+
     # 2D Projected covariance on the x-z plane of the relative encounter frame
     red = np.array([[1., 0., 0.], [0., 0., 1.]])
     Pxz = np.dot(red, np.dot(Pxyz, red.T))
 
     # Exception Handling
     # Remediate non-positive definite covariances
-    Lclip = (1e-4*HBR)**2.
+    Lclip = (1e-4 * HBR) ** 2.
     Pxz_rem, Pxz_det, Pxz_inv, posdef_status, clip_status = remediate_covariance(Pxz, Lclip)
-    
-    
+
     # Calculate Double Integral
     x0 = np.linalg.norm(r)
     z0 = 0.
-    
+
     # Set up quadrature
     atol = 1e-13
-    Integrand = lambda z, x: math.exp(-0.5*(Pxz_inv[0,0]*x**2. + Pxz_inv[0,1]*x*z + Pxz_inv[1,0]*x*z + Pxz_inv[1,1]*z**2.))
+    Integrand = lambda z, x: math.exp(
+        -0.5 * (Pxz_inv[0, 0] * x ** 2. + Pxz_inv[0, 1] * x * z + Pxz_inv[1, 0] * x * z + Pxz_inv[1, 1] * z ** 2.))
 
     if HBR_type == 'circle':
-        lower_semicircle = lambda x: -np.sqrt(HBR**2. - (x-x0)**2.)*(abs(x-x0)<=HBR)
-        upper_semicircle = lambda x:  np.sqrt(HBR**2. - (x-x0)**2.)*(abs(x-x0)<=HBR)
-        Pc = (1./(2.*math.pi))*(1./np.sqrt(Pxz_det))*float(dblquad(Integrand, x0-HBR, x0+HBR, lower_semicircle, upper_semicircle, epsabs=atol, epsrel=rtol)[0])
-        
+        lower_semicircle = lambda x: -np.sqrt(HBR ** 2. - (x - x0) ** 2.) * (abs(x - x0) <= HBR)
+        upper_semicircle = lambda x: np.sqrt(HBR ** 2. - (x - x0) ** 2.) * (abs(x - x0) <= HBR)
+        Pc = (1. / (2. * math.pi)) * (1. / np.sqrt(Pxz_det)) * float(
+            dblquad(Integrand, x0 - HBR, x0 + HBR, lower_semicircle, upper_semicircle, epsabs=atol, epsrel=rtol)[0])
+
     elif HBR_type == 'square':
-        Pc = (1./(2.*math.pi))*(1./np.sqrt(Pxz_det))*float(dblquad(Integrand, x0-HBR, x0+HBR, z0-HBR, z0+HBR, epsabs=atol, epsrel=rtol)[0])
-        
+        Pc = (1. / (2. * math.pi)) * (1. / np.sqrt(Pxz_det)) * float(
+            dblquad(Integrand, x0 - HBR, x0 + HBR, z0 - HBR, z0 + HBR, epsabs=atol, epsrel=rtol)[0])
+
     elif HBR_type == 'squareEqArea':
-        HBR_eq = HBR*np.sqrt(math.pi)/2.
-        Pc = (1./(2.*math.pi))*(1./np.sqrt(Pxz_det))*float(dblquad(Integrand, x0-HBR_eq, x0+HBR_eq, z0-HBR_eq, z0+HBR_eq, epsabs=atol, epsrel=rtol)[0])
-    
+        HBR_eq = HBR * np.sqrt(math.pi) / 2.
+        Pc = (1. / (2. * math.pi)) * (1. / np.sqrt(Pxz_det)) * float(
+            dblquad(Integrand, x0 - HBR_eq, x0 + HBR_eq, z0 - HBR_eq, z0 + HBR_eq, epsabs=atol, epsrel=rtol)[0])
+
     else:
         print('Error: HBR type is not supported! Must be circle, square, or squareEqArea')
         print(HBR_type)
-    
+
     return Pc
 
 
@@ -616,20 +620,20 @@ def remediate_covariance(Praw, Lclip, Lraw=[], Vraw=[]):
     
     
     '''
-    
+
     # Ensure the covariance has all real elements
     if not np.all(np.isreal(Praw)):
         print('Error: input Praw is not real!')
         print(Praw)
         return
-    
+
     # Calculate eigenvectors and eigenvalues if not input
     if len(Lraw) == 0 and len(Vraw) == 0:
         Lraw, Vraw = np.linalg.eig(Praw)
-        
+
     # Define the positive definite status of Praw
     posdef_status = np.sign(min(Lraw))
-    
+
     # Clip eigenvalues if needed, and record clipping status
     Lrem = Lraw.copy()
     if min(Lraw) < Lclip:
@@ -637,20 +641,19 @@ def remediate_covariance(Praw, Lclip, Lraw=[], Vraw=[]):
         Lrem[Lraw < Lclip] = Lclip
     else:
         clip_status = False
-        
+
     # Determinant of remediated covariance
     Pdet = np.prod(Lrem)
-    
+
     # Inverse of remediated covariance
-    Pinv = np.dot(Vraw, np.dot(np.diag(1./Lrem), Vraw.T))
-    
+    Pinv = np.dot(Vraw, np.dot(np.diag(1. / Lrem), Vraw.T))
+
     # Remediated covariance
     if clip_status:
         Prem = np.dot(Vraw, np.dot(np.diag(Lrem), Vraw.T))
     else:
         Prem = Praw.copy()
-    
-    
+
     return Prem, Pdet, Pinv, posdef_status, clip_status
 
 
@@ -689,8 +692,8 @@ def montecarlo_Pc_final(r_A, r_B, P_A, P_B, HBR, N=None):
             total += 1.
             if d <= HBR:
                 hits += 1.
-        if(not ii % 10000):
-            print("MC Iteration n. ", int(ii/1000), 'k')
+        if (not ii % 10000):
+            print("MC Iteration n. ", int(ii / 1000), 'k')
     Pc = hits / total
 
     return Pc
@@ -729,7 +732,7 @@ def montecarlo_Pc_combined(r_A, r_B, P_A, P_B, HBR, N=None):
 # Time of Closest Approach (TCA) Calculation
 ###############################################################################
 
-def compute_TCA(X1, X2, trange, rso1_params, rso2_params, int_params, 
+def compute_TCA(X1, X2, trange, rso1_params, rso2_params, int_params,
                 bodies=None, rho_min_crit=0., N=16, subinterval_factor=0.5):
     '''
     This function computes the Time of Closest Approach using Chebyshev Proxy
@@ -776,104 +779,102 @@ def compute_TCA(X1, X2, trange, rso1_params, rso2_params, int_params,
         list of ranges between the objects
     
     '''
-    
+
     # Setup Tudat propagation if needed
     if bodies is None:
         bodies = prop.tudat_initialize_bodies()
-        
+
     # Setup first time interval
     subinterval = compute_subinterval(X1, X2, subinterval_factor)
     t0 = trange[0]
     a = trange[0]
     b = min(trange[-1], a + subinterval)
-        
+
     # Compute interpolation matrix for Chebyshev Proxy Polynomials of order N
     # Note that this can be reused for all polynomial approximations as it
     # only depends on the order
     interp_mat = compute_interpolation_matrix(N)
-    
+
     # Loop over times in increments of subinterval until end of trange
     T_list = []
     rho_list = []
     rho_min = np.inf
     tmin = 0.
     while b <= trange[1]:
-        
+
         # print('')
         # print('current interval [t0, tf]')
         # print(a, b)
         # print('dt [sec]', b-a)
         # print('dt total [hours]', (b-trange[0])/3600.)
-    
+
         # Determine Chebyshev-Gauss-Lobato node locations
         tvec = compute_CGL_nodes(a, b, N)
-        
+
         # Evaluate function at node locations
-        gvec, dum1, dum2, dum3, X1out, X2out, ti_out =  gvec_tudat(t0, tvec, X1, X2, rso1_params, rso2_params, int_params, bodies)
+        gvec, dum1, dum2, dum3, X1out, X2out, ti_out = gvec_tudat(t0, tvec, X1, X2, rso1_params, rso2_params,
+                                                                  int_params, bodies)
         # print('gvec', gvec)
-        
-        
+
         # Find the roots of the relative range rate g(t)
         troots = compute_gt_roots(gvec, interp_mat, a, b)
         # print('troots', troots)
-        
+
         # If this is first pass, include the interval endpoints for evaluation
         if np.isinf(rho_min):
             troots = np.concatenate((troots, np.array([trange[0], trange[-1]])))
-            
-                
+
         # Check if roots constitute a global minimum and/or are below the
         # critical threshold
         if len(troots) > 0:
-            
+
             # dum, rvec, ivec, cvec = gvec_fcn(t0, troots, X1, X2, params)
             # dum, rvec, ivec, cvec =  gvec_tudat(t0, troots, X1, X2, rso1_params, rso2_params, int_params, bodies)
-            dum1, rvec, ivec, cvec, dum2, dum3, dum4 = gvec_tudat(t0, troots, X1, X2, rso1_params, rso2_params, int_params, bodies)
+            dum1, rvec, ivec, cvec, dum2, dum3, dum4 = gvec_tudat(t0, troots, X1, X2, rso1_params, rso2_params,
+                                                                  int_params, bodies)
             for ii in range(len(troots)):
-                rho = np.sqrt(rvec[ii]**2 + ivec[ii]**2 + cvec[ii]**2)
-                
+                rho = np.sqrt(rvec[ii] ** 2 + ivec[ii] ** 2 + cvec[ii] ** 2)
+
                 # print('ti', troots[ii])
                 # print('rho', rho)
-                
+
                 # Store if below critical threshold
                 if rho < rho_min_crit:
                     rho_list.append(rho)
                     T_list.append(troots[ii])
-                
+
                 # Update global minimum
                 if rho < rho_min:
                     rho_min = rho
                     tmin = troots[ii]
-            
+
         # Increment time interval
         if b == trange[-1]:
             break
-        
+
         a = float(b)
         if b + subinterval <= trange[-1]:
             b += subinterval
         else:
-            b = trange[-1]  
-            
-        # Update state vectors for next iteration
+            b = trange[-1]
+
+            # Update state vectors for next iteration
         X1 = X1out
         X2 = X2out
         t0 = ti_out
-            
+
     # # Evaluate the relative range at the endpoints of the interval to ensure
     # # these are not overlooked
     # dum, rvec, ivec, cvec = gvec_fcn(trange, X1, X2, params)
     # rho0 = np.sqrt(rvec[0]**2 + ivec[0]**2 + cvec[0]**2)
     # rhof = np.sqrt(rvec[-1]**2 + ivec[-1]**2 + cvec[-1]**2)
-    
+
     # # Store the global minimum and append to lists if others are below 
     # # critical threshold
     # rho_candidates = [rho_min, rho0, rhof]
     # global_min = min(rho_candidates)
     # global_tmin = [tmin, trange[0], trange[-1]][rho_candidates.index(global_min)]
-    
-    
-    
+
     # if ((rho0 < rho_min_crit) and (rhof < rho_min_crit)) or (rho0 == rhof):
     #     T_list = [trange[0], trange[-1]]
     #     rho_list = [rho0, rhof]
@@ -883,23 +884,22 @@ def compute_TCA(X1, X2, trange, rso1_params, rso2_params, int_params,
     # elif rhof < rho0:
     #     T_list = [trange[-1]]
     #     rho_list = [rhof]   
-        
+
     # If a global minimum has been found, store output
     if rho_min < np.inf and tmin not in T_list:
         T_list.append(tmin)
         rho_list.append(rho_min)
-    
+
     # # Otherwise, compute and store the minimum range and TCA using the 
     # # endpoints of the interval
     # else:
-           
-        
+
     # Sort output
     if len(T_list) > 1:
         sorted_inds = np.argsort(T_list)
         T_list = [T_list[ii] for ii in sorted_inds]
         rho_list = [rho_list[ii] for ii in sorted_inds]
-    
+
     return T_list, rho_list
 
 
@@ -908,57 +908,56 @@ def gvec_tudat(t0, tvec, X1, X2, rso1_params, rso2_params, int_params, bodies):
     This function computes terms for the Denenberg TCA algorithm.
     
     '''
-    
+
     # Compute function values to find roots of
     # In order to minimize rho, we seek zeros of first derivative
     # f(t) = dot(rho_vect, rho_vect)
     # g(t) = df/dt = 2*dot(drho_vect, rho_vect)
-    gvec = np.zeros(len(tvec),)
-    rvec = np.zeros(len(tvec),)
-    ivec = np.zeros(len(tvec),)
-    cvec = np.zeros(len(tvec),)
+    gvec = np.zeros(len(tvec), )
+    rvec = np.zeros(len(tvec), )
+    ivec = np.zeros(len(tvec), )
+    cvec = np.zeros(len(tvec), )
     jj = 0
     for ti in tvec:
-        
+
         if ti == t0:
-        # if ti == tvec[0]:
+            # if ti == tvec[0]:
             X1_t = X1
             X2_t = X2
-            
+
         else:
             tin = [t0, ti]
             # tin = [tvec[0], ti]
             tout1, Xout1 = prop.propagate_orbit(X1, tin, rso1_params, int_params, bodies)
             tout2, Xout2 = prop.propagate_orbit(X2, tin, rso2_params, int_params, bodies)
-            
-            X1_t = Xout1[-1,:]
-            X2_t = Xout2[-1,:]        
-        
-        rc_vect = X1_t[0:3].reshape(3,1)
-        vc_vect = X1_t[3:6].reshape(3,1)
-        rd_vect = X2_t[0:3].reshape(3,1)
-        vd_vect = X2_t[3:6].reshape(3,1)
-        
+
+            X1_t = Xout1[-1, :]
+            X2_t = Xout2[-1, :]
+
+        rc_vect = X1_t[0:3].reshape(3, 1)
+        vc_vect = X1_t[3:6].reshape(3, 1)
+        rd_vect = X2_t[0:3].reshape(3, 1)
+        vd_vect = X2_t[3:6].reshape(3, 1)
+
         rho_eci = rd_vect - rc_vect
         drho_eci = vd_vect - vc_vect
         rho_ric = eci2ric(rc_vect, vc_vect, rho_eci)
         drho_ric = eci2ric_vel(rc_vect, vc_vect, rho_ric, drho_eci)
-        
+
         rho_ric = rho_ric.flatten()
         drho_ric = drho_ric.flatten()
-        
+
         # print('')
         # print('ti', ti)
         # print('X1_t', X1_t)
         # print('X2_t', X2_t)
-        
-        gvec[jj] = float(2*np.dot(rho_ric.T, drho_ric))
+
+        gvec[jj] = float(2 * np.dot(rho_ric.T, drho_ric))
         rvec[jj] = float(rho_ric[0])
         ivec[jj] = float(rho_ric[1])
         cvec[jj] = float(rho_ric[2])
-        jj += 1    
-    
-    
+        jj += 1
+
     return gvec, rvec, ivec, cvec, X1_t, X2_t, ti
 
 
@@ -985,11 +984,11 @@ def compute_CGL_nodes(a, b, N):
         CGL node locations
     
     '''
-    
+
     # Compute CGL nodes (Denenberg Eq 11)
-    jvec = np.arange(0,N+1)
-    xvec = ((b-a)/2.)*(np.cos(np.pi*jvec/N)) + ((b+a)/2.)
-    
+    jvec = np.arange(0, N + 1)
+    xvec = ((b - a) / 2.) * (np.cos(np.pi * jvec / N)) + ((b + a) / 2.)
+
     return xvec
 
 
@@ -1012,50 +1011,49 @@ def compute_interpolation_matrix(N):
         interpolation matrix
         
     '''
-    
+
     # Compute values of pj (Denenberg Eq 13)
-    pvec = np.ones(N+1,)
+    pvec = np.ones(N + 1, )
     pvec[0] = 2.
     pvec[N] = 2.
-    
+
     # Compute terms of interpolation matrix (Denenberg Eq 12)
     # Set up arrays of j,k values and compute outer product matrix
-    jvec = np.arange(0,N+1)
+    jvec = np.arange(0, N + 1)
     kvec = jvec.copy()
-    jk_mat = np.dot(jvec.reshape(N+1,1),kvec.reshape(1,N+1))
-    
+    jk_mat = np.dot(jvec.reshape(N + 1, 1), kvec.reshape(1, N + 1))
+
     # Compute cosine term and pj,pk matrix, then multiply component-wise
-    Cmat = np.cos(np.pi/N*jk_mat)
-    pjk_mat = (2./N)*(1./np.dot(pvec.reshape(N+1,1), pvec.reshape(1,N+1)))
+    Cmat = np.cos(np.pi / N * jk_mat)
+    pjk_mat = (2. / N) * (1. / np.dot(pvec.reshape(N + 1, 1), pvec.reshape(1, N + 1)))
     interp_mat = np.multiply(pjk_mat, Cmat)
-    
+
     return interp_mat
 
 
 def compute_gt_roots(gvec, interp_mat, a, b):
-    
     # Order of approximation
     N = len(gvec) - 1
-    
+
     # Compute aj coefficients (Denenberg Eq 14)
-    aj_vec = np.dot(interp_mat, gvec.reshape(N+1,1))
-    
+    aj_vec = np.dot(interp_mat, gvec.reshape(N + 1, 1))
+
     # Compute the companion matrix (Denenberg Eq 18)
-    Amat = np.zeros((N,N))
-    Amat[0,1] = 1.
-    Amat[-1,:] = -aj_vec[0:N].flatten()/(2*aj_vec[N])
-    Amat[-1,-2] += 0.5
-    for jj in range(1,N-1):
-        Amat[jj,jj-1] = 0.5
-        Amat[jj,jj+1] = 0.5
-        
+    Amat = np.zeros((N, N))
+    Amat[0, 1] = 1.
+    Amat[-1, :] = -aj_vec[0:N].flatten() / (2 * aj_vec[N])
+    Amat[-1, -2] += 0.5
+    for jj in range(1, N - 1):
+        Amat[jj, jj - 1] = 0.5
+        Amat[jj, jj + 1] = 0.5
+
     # Compute eigenvalues
     # TODO paper indicates some eigenvalues may have small imaginary component
     # but testing seems to show this is much more significant issue, needs
     # further analysis
     eig, dum = np.linalg.eig(Amat)
     eig_real = np.asarray([np.real(ee) for ee in eig if (np.isreal(ee) and ee >= -1. and ee <= 1.)])
-    roots = (b+a)/2. + eig_real*(b-a)/2.
+    roots = (b + a) / 2. + eig_real * (b - a) / 2.
 
     return roots
 
@@ -1086,41 +1084,39 @@ def compute_subinterval(X1, X2, subinterval_factor=0.5, GM=3.986004415e14):
         duration of appropriate subinterval [sec]
         
     '''
-    
+
     # Compute semi-major axis
     a1 = compute_SMA(X1, GM)
     a2 = compute_SMA(X2, GM)
-    
+
     # print('a1', a1)
     # print('a2', a2)
-    
+
     # If both orbits are closed, choose the smaller to compute orbit period
     if (a1 > 0.) and (a2 > 0.):
         amin = min(a1, a2)
-        period = 2.*np.pi*np.sqrt(amin**3./GM)
-        
+        period = 2. * np.pi * np.sqrt(amin ** 3. / GM)
+
     # If one orbit is closed and the other is an escape trajectory, choose the
     # closed orbit to compute orbit period
     elif a1 > 0.:
-        period = 2.*np.pi*np.sqrt(a1**3./GM)
-    
+        period = 2. * np.pi * np.sqrt(a1 ** 3. / GM)
+
     elif a2 > 0.:
-        period = 2.*np.pi*np.sqrt(a2**3./GM)
-        
+        period = 2. * np.pi * np.sqrt(a2 ** 3. / GM)
+
     # If both orbits are escape trajectories, choose an arbitrary period 
     # corresponding to small orbit
     else:
         period = 3600.
-        
+
     # print(period)
 
-        
     # Scale the smaller orbit period by user input
-    subinterval = period*subinterval_factor
-    
+    subinterval = period * subinterval_factor
+
     # print('subinterval', subinterval)
 
-    
     return subinterval
 
 
@@ -1142,7 +1138,7 @@ def compute_SMA(cart, GM=3.986004415e14):
         semi-major axis [m]
     
     '''
-    
+
     # Retrieve position and velocity vectors
     r_vect = cart[0:3].flatten()
     v_vect = cart[3:6].flatten()
@@ -1152,8 +1148,8 @@ def compute_SMA(cart, GM=3.986004415e14):
     v2 = np.dot(v_vect, v_vect)
 
     # Calculate semi-major axis
-    a = 1./(2./r - v2/GM)        
-    
+    a = 1. / (2. / r - v2 / GM)
+
     return a
 
 
@@ -1176,17 +1172,17 @@ def eci2ric(rc_vect, vc_vect, Q_eci=[]):
     Q_ric : 3x1 or 3x3 numpy array
       vector or matrix in RIC
     '''
-    
+
     # Reshape inputs
-    rc_vect = rc_vect.reshape(3,1)
-    vc_vect = vc_vect.reshape(3,1)
+    rc_vect = rc_vect.reshape(3, 1)
+    vc_vect = vc_vect.reshape(3, 1)
 
     # Compute transformation matrix to Hill (RIC) frame
     rc = np.linalg.norm(rc_vect)
-    OR = rc_vect/rc
+    OR = rc_vect / rc
     h_vect = np.cross(rc_vect, vc_vect, axis=0)
     h = np.linalg.norm(h_vect)
-    OH = h_vect/h
+    OH = h_vect / h
     OT = np.cross(OH, OR, axis=0)
 
     ON = np.concatenate((OR.T, OT.T, OH.T))
@@ -1195,7 +1191,7 @@ def eci2ric(rc_vect, vc_vect, Q_eci=[]):
     if len(Q_eci) == 0:
         Q_ric = ON
     elif np.size(Q_eci) == 3:
-        Q_eci = Q_eci.reshape(3,1)
+        Q_eci = Q_eci.reshape(3, 1)
         Q_ric = np.dot(ON, Q_eci)
     else:
         Q_ric = np.dot(np.dot(ON, Q_eci), ON.T)
@@ -1222,17 +1218,17 @@ def ric2eci(rc_vect, vc_vect, Q_ric=[]):
     Q_ric : 3x1 or 3x3 numpy array
       vector or matrix in ECI
     '''
-    
+
     # Reshape inputs
-    rc_vect = rc_vect.reshape(3,1)
-    vc_vect = vc_vect.reshape(3,1)
+    rc_vect = rc_vect.reshape(3, 1)
+    vc_vect = vc_vect.reshape(3, 1)
 
     # Compute transformation matrix to Hill (RIC) frame
     rc = np.linalg.norm(rc_vect)
-    OR = rc_vect/rc
+    OR = rc_vect / rc
     h_vect = np.cross(rc_vect, vc_vect, axis=0)
     h = np.linalg.norm(h_vect)
-    OH = h_vect/h
+    OH = h_vect / h
     OT = np.cross(OH, OR, axis=0)
 
     ON = np.concatenate((OR.T, OT.T, OH.T))
@@ -1271,27 +1267,27 @@ def eci2ric_vel(rc_vect, vc_vect, rho_ric, drho_eci):
       relative velocity in RIC
 
     '''
-    
+
     # Reshape inputs
-    rc_vect = rc_vect.reshape(3,1)
-    vc_vect = vc_vect.reshape(3,1)
-    rho_ric = rho_ric.reshape(3,1)
-    drho_eci = drho_eci.reshape(3,1)
+    rc_vect = rc_vect.reshape(3, 1)
+    vc_vect = vc_vect.reshape(3, 1)
+    rho_ric = rho_ric.reshape(3, 1)
+    drho_eci = drho_eci.reshape(3, 1)
 
     # Compute transformation matrix to Hill (RIC) frame
     rc = np.linalg.norm(rc_vect)
-    OR = rc_vect/rc
+    OR = rc_vect / rc
     h_vect = np.cross(rc_vect, vc_vect, axis=0)
     h = np.linalg.norm(h_vect)
-    OH = h_vect/h
+    OH = h_vect / h
     OT = np.cross(OH, OR, axis=0)
 
     ON = np.concatenate((OR.T, OT.T, OH.T))
 
     # Compute angular velocity vector
-    dtheta = h/rc**2.
-    w = np.reshape([0., 0., dtheta], (3,1))
-    
+    dtheta = h / rc ** 2.
+    w = np.reshape([0., 0., dtheta], (3, 1))
+
     # Compute relative velocity vector using kinematic identity
     drho_ric = np.dot(ON, drho_eci) - np.cross(w, rho_ric, axis=0)
 
@@ -1320,31 +1316,31 @@ def ric2eci_vel(rc_vect, vc_vect, rho_ric, drho_ric):
       relative velocity in ECI
 
     '''
-    
+
     # Reshape inputs
-    rc_vect = rc_vect.reshape(3,1)
-    vc_vect = vc_vect.reshape(3,1)
-    rho_ric = rho_ric.reshape(3,1)
-    drho_ric = drho_ric.reshape(3,1)
+    rc_vect = rc_vect.reshape(3, 1)
+    vc_vect = vc_vect.reshape(3, 1)
+    rho_ric = rho_ric.reshape(3, 1)
+    drho_ric = drho_ric.reshape(3, 1)
 
     # Compute transformation matrix to Hill (RIC) frame
     rc = np.linalg.norm(rc_vect)
-    OR = rc_vect/rc
+    OR = rc_vect / rc
     h_vect = np.cross(rc_vect, vc_vect, axis=0)
     h = np.linalg.norm(h_vect)
-    OH = h_vect/h
+    OH = h_vect / h
     OT = np.cross(OH, OR, axis=0)
 
     ON = np.concatenate((OR.T, OT.T, OH.T))
     NO = ON.T
-    
+
     # Compute angular velocity vector
-    dtheta = h/rc**2.
-    w = np.reshape([0., 0., dtheta], (3,1))
-    
+    dtheta = h / rc ** 2.
+    w = np.reshape([0., 0., dtheta], (3, 1))
+
     # Compute relative velocity vector using kinematic identity
-    drho_eci = np.dot(NO, (drho_ric + np.cross(w, rho_ric, axis=0))) 
-    
+    drho_eci = np.dot(NO, (drho_ric + np.cross(w, rho_ric, axis=0)))
+
     return drho_eci
 
 
@@ -1363,9 +1359,9 @@ def orbit_orientation(kepler_elements: np.ndarray[float]) -> np.ndarray[float]:
 
     i = kepler_elements[2]
     raan = kepler_elements[4]
-    ihat = np.array([1,0,0])
-    jhat = np.array([0,1,0])
-    khat = np.array([0,0,1])
+    ihat = np.array([1, 0, 0])
+    jhat = np.array([0, 1, 0])
+    khat = np.array([0, 0, 1])
     w = np.sin(raan) * np.sin(i) * ihat + np.cos(raan) * np.sin(i) * jhat + np.cos(i) * khat
 
     return w
@@ -1382,9 +1378,9 @@ def node_line(kepler_elements: np.ndarray[float]) -> np.ndarray[float]:
 
     i = kepler_elements[2]
     raan = kepler_elements[4]
-    ihat = np.array([1,0,0])
-    jhat = np.array([0,1,0])
-    khat = np.array([0,0,1])
+    ihat = np.array([1, 0, 0])
+    jhat = np.array([0, 1, 0])
+    khat = np.array([0, 0, 1])
     n = np.cos(raan) * ihat + np.sin(raan) * jhat
 
     return n
@@ -1404,73 +1400,70 @@ def unit_test_tca():
     RKF78 to compare the results.
     
     '''
-    
+
     # Initial time and state vectors
     t0 = (datetime(2024, 3, 23, 5, 30, 0) - datetime(2000, 1, 1, 12, 0, 0)).total_seconds()
-    
-    X1 = np.array([[ 3.75944379e+05],
-                   [ 6.08137408e+06],
-                   [ 3.28340214e+06],
+
+    X1 = np.array([[3.75944379e+05],
+                   [6.08137408e+06],
+                   [3.28340214e+06],
                    [-5.32161464e+03],
                    [-2.32172417e+03],
-                   [ 4.89152047e+03]])
-    
-    X2 = np.array([[ 3.30312011e+06],
+                   [4.89152047e+03]])
+
+    X2 = np.array([[3.30312011e+06],
                    [-2.69542170e+06],
                    [-5.71365135e+06],
                    [-4.06029364e+03],
                    [-6.22037456e+03],
-                   [ 9.09217382e+02]])
-    
+                   [9.09217382e+02]])
+
     # Basic setup parameters
     bodies_to_create = ['Sun', 'Earth', 'Moon']
-    bodies = prop.tudat_initialize_bodies(bodies_to_create) 
-    
+    bodies = prop.tudat_initialize_bodies(bodies_to_create)
+
     rso1_params = {}
     rso1_params['mass'] = 260.
     rso1_params['area'] = 17.5
     rso1_params['Cd'] = 2.2
     rso1_params['Cr'] = 1.3
     rso1_params['sph_deg'] = 8
-    rso1_params['sph_ord'] = 8    
+    rso1_params['sph_ord'] = 8
     rso1_params['central_bodies'] = ['Earth']
     rso1_params['bodies_to_create'] = bodies_to_create
-    
+
     rso2_params = {}
     rso2_params['mass'] = 100.
     rso2_params['area'] = 1.
     rso2_params['Cd'] = 2.2
     rso2_params['Cr'] = 1.3
     rso2_params['sph_deg'] = 8
-    rso2_params['sph_ord'] = 8    
+    rso2_params['sph_ord'] = 8
     rso2_params['central_bodies'] = ['Earth']
     rso2_params['bodies_to_create'] = bodies_to_create
-    
+
     int_params = {}
     int_params['tudat_integrator'] = 'rk4'
     int_params['step'] = 1.
-    
+
     # Expected result
-    TCA_true = 764445600.0  
+    TCA_true = 764445600.0
     rho_true = 0.
-    
+
     # Interval times
     tf = t0 + 3600.
     trange = np.array([t0, tf])
-    
+
     # RK4 test
     start = time.time()
     # T_list, rho_list = compute_TCA(X1, X2, trange, rso1_params, rso2_params, 
     #                                int_params, bodies)
-    
 
-    
     # print('')
     # print('RK4 TCA unit test runtime [seconds]:', time.time() - start)
     # print('RK4 TCA error [seconds]:', T_list[0]-TCA_true)
     # print('RK4 miss distance error [m]:', rho_list[0]-rho_true)
-    
-    
+
     # RK78 test
     int_params['tudat_integrator'] = 'rkf78'
     int_params['step'] = 10.
@@ -1478,24 +1471,18 @@ def unit_test_tca():
     int_params['min_step'] = 1e-3
     int_params['rtol'] = 1e-12
     int_params['atol'] = 1e-12
-    
-    
+
     start = time.time()
-    T_list, rho_list = compute_TCA(X1, X2, trange, rso1_params, rso2_params, 
+    T_list, rho_list = compute_TCA(X1, X2, trange, rso1_params, rso2_params,
                                    int_params, bodies)
-    
 
     print('')
     print('RK78 TCA unit test runtime [seconds]:', time.time() - start)
-    print('RK78 TCA error [seconds]:', T_list[0]-TCA_true)
-    print('RK78 miss distance error [m]:', rho_list[0]-rho_true)
-    
-    
-    
+    print('RK78 TCA error [seconds]:', T_list[0] - TCA_true)
+    print('RK78 miss distance error [m]:', rho_list[0] - rho_true)
+
     return
 
 
-
 if __name__ == '__main__':
-    
     unit_test_tca()
