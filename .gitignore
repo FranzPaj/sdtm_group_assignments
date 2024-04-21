@@ -1,7 +1,6 @@
 # PyCharm files
 .idea/
-Assignment1/__pycache__
-Assignment1/pycode/__pycache__
-Assignment2/__pycache__
-Assignment2/pycode/__pycache__
+
+__pycache__/
+
 

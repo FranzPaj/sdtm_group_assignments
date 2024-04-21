@@ -1,9 +1,12 @@
 clear all, close all, clc
+% Version for Assignment 4
+% Objects already in: 91332, 91395, 91509, 91686, 91883
+% Objects to add: 99002, 91762
 
 addpath ../Pc2D_Foster
 addpath(genpath('../Utils'))
 
-Accuracy        = 0.05; % Desired MC Accuracy (0.01=1%)
+Accuracy        = 0.1; % Desired MC Accuracy (0.01=1%)
 MC_Confidence   = 0.95; % Desired Monte Carlo Confidence Level
 GM              = 3.986004418e14;% Earth gravitational constant mu = GM (EGM-96) [m^3/s^2] 
 LowVelThreshold = 0.05; % 5% of Orbital Period
@@ -32,6 +35,13 @@ for i = 1:num_obj
     P2 = M(i,9:44);
     P2 = reshape(P1,[6,6]);
     radius2 = sqrt(A2 / pi);
+
+    % DEBUGGING
+    % str2num(noradid2) 
+    % if(str2num(noradid2) ~= 91686)
+    %     disp('-- not of interest')
+    %     continue
+    % end
     
     HBR = radius1 + radius2;
 
@@ -64,12 +74,17 @@ for i = 1:num_obj
     % Calculate 2D PC            
     Pc2D = Pc2D_Foster(r1_J2K*1000,v1_J2K*1000,C1_J2K,r2_J2K*1000,v2_J2K*1000,C2_J2K,HBR,1e-8,'circle');
     
+    % Save Foster value
+    disp(join(['Foster probability: ', num2str(Pc2D)]))
+    filename = join([out_dir, '/Pc_foster.dat']);
+    writematrix(Pc2D,filename)  
+
     % If PC too small -> it's going to break
     % Pass to the next object
-    if Pc2D < 1e-6
+    if Pc2D < 1e-5
         filename = join([out_dir, '/Pc_foster.dat']);
         writematrix(Pc2D,filename) 
-        warning(['object ignored as Pc2D < 1e-6'])
+        warning(['object ignored as Pc2D < 1e-5'])
         continue
     end 
 
@@ -79,6 +94,9 @@ for i = 1:num_obj
     Nsample_kep = max(1e2,Nsample_kep);
     Nsample_kep = min(1e10,Nsample_kep);
     
+    disp(join(['Number of samples needed: ',num2str(Nsample_kep)]))
+
+
     % Determine Batch Size min 1000, max 5000
     p = gcp;
     Nsample_batch = max([min([ceil(Nsample_kep/p.NumWorkers/1000)*1000 5000]) 1000]);
@@ -146,9 +164,6 @@ for i = 1:num_obj
             HBR, GM, 'k2bpri',...
             MC_Confidence, Nsample_batch, plot_dir);
     
-    
-    filename = join([out_dir, '/Pc_foster.dat']);
-    writematrix(Pc2D,filename)  
     
     filename = join([out_dir, '/Pc_MonteCarlo.dat']);
     writematrix(actSolution,filename)  

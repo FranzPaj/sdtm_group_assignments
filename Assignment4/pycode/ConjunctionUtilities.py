@@ -86,6 +86,8 @@ class Object:
         self.ra = self.sma * (1 + self.ecc)  # Radius of apoapsis
         self.T_orb = 2 * np.pi * np.sqrt(self.sma**3 / mu_e)
 
+        self.new_meas = False
+
         # to propagate at TCA
         self.tf = None
         self.Xf = None
@@ -107,6 +109,7 @@ class Object:
         self.tf = None
         self.Xf = None
         self.Pf = None
+
 ###############################################################################
 # Basic I/O
 ###############################################################################
